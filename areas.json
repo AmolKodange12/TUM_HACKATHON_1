@@ -1,0 +1,6 @@
+[
+  {"id": "kaniv", "name": "Kaniv Ridge", "region": "Cherkasy Oblast, Ukraine", "bbox": [31.40, 49.68, 31.56, 49.80]},
+  {"id": "yaremche", "name": "Yaremche", "region": "Carpathians, Ukraine", "bbox": [24.48, 48.40, 24.64, 48.50]},
+  {"id": "devin", "name": "Devin", "region": "Western Rhodopes, Bulgaria", "bbox": [24.32, 41.68, 24.48, 41.80]},
+  {"id": "flevoland", "name": "Flevoland", "region": "Polder, Netherlands", "bbox": [5.60, 52.46, 5.78, 52.56]}
+]

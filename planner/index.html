@@ -120,7 +120,7 @@ const ALT_RANGE = { quadcopter: [40, 150], fixed_wing_recon: [300, 1000], delta_
 
 const types = Object.fromEntries(Object.entries(await (await fetch('../drones.json')).json()).filter(([k]) => !k.startsWith('_')));
 const load = async url => { const r = await fetch(url, { cache: 'no-store' }).catch(() => null); return r?.ok ? r.json() : null; };
-let sc = await load('../out/scenario.json') ?? await load('../scenario.json');
+let sc = await load('../out/planned/scenario.json') ?? await load('../scenario.json');
 
 // ---- map ----
 const map = L.map('map', { zoomControl: true });
@@ -346,7 +346,7 @@ $('#run').onclick = async () => {
   if (res?.ok && out?.ok) {
     $('#msg').className = 'hint';
     $('#msg').innerHTML = `Done: ${Object.values(out.fixes).reduce((a, b) => a + b, 0)} position fixes. Opening the replay…`;
-    location.href = '../viewer/';
+    location.href = '../viewer/?planned=1';
     return;
   }
   $('#run').disabled = false;

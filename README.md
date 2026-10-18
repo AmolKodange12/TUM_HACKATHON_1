@@ -14,44 +14,71 @@ Plan a scenario on a map (area, receivers, drones), run it, and replay it: how c
 
 ```bash
 uv venv && uv pip install -r requirements.txt    # or: pip install -r requirements.txt
-.venv/bin/python sim.py                          # scenario.json -> out/
+.venv/bin/python serve.py                        # then open http://localhost:8765/viewer/ (or /planner/, /cute/)
 .venv/bin/python test_sim.py                     # faithfulness checks
-.venv/bin/python serve.py                        # then open http://localhost:8765/planner/ or /viewer/
+.venv/bin/python sim.py                          # optional: scenario.json -> out/, no viewer
 ```
 
-`serve.py` serves the pages and runs the engine when the planner asks (`POST /api/simulate`). The replay alone also works from any static server, e.g. `python3 -m http.server 8765`.
+1. Choose one of the 4 areas, or plan your own scenario.
+2. Set the number of receivers and drones. The engine runs again (in a few seconds) and puts them at random positions.
+3. Click **New layout** to get a new seed and new positions.
 
-The first run downloads part of one Copernicus GLO-30 tile from public S3 (no key). The engine keeps it in `.cache/`.
+The switch at the top flips between two views of the same data: **Pro**, the detailed radio view, and **Simple**, *Sky Spotters*, the bird game. Flipping keeps the area, the receivers and the moment.
 
-Direct link to one moment: `viewer/?t=450&ground=map&sel=RF2|drone_01&heat=located`. The parameters are `t` (seconds), `ground` (`sat`, `map`, `elev`), `show` (`truth`, `sensed`, `both`), `sel` (receiver|object) and `heat` (`located`, `heard`, `err`).
+The first visit to an area downloads part of one Copernicus GLO-30 tile from public S3 (no key). The engine keeps it in `.cache/`.
+
+The URL always holds the current layout, so you can share it. Example: `viewer/?area=kaniv&rx=3&dr=2&seed=42&t=450&ground=map&sel=RF2|drone_01`. The parameters are:
+- `area`: the area id from `areas.json`
+- `rx`, `dr`: the number of receivers and drones
+- `seed`: the random seed
+- `t`: the time in seconds
+- `ground`: `sat`, `map` or `elev`
+- `show`: `truth`, `sensed` or `both`
+- `sel`: a receiver|object pair
+- `heat`: open the coverage heatmap with `located`, `heard` or `err`
+- `play=1`: start playing
+
+Two more sources: `viewer/?game=<area>&huts=<lat,lon;...>&birds=6&seed=3` replays a round of the bird game, and `viewer/?planned=1` shows the last scenario from the planner.
 
 ## Planner (`planner/`)
 
-Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), click to place receivers, and add drones: choose a type and click its waypoints, or add N random drones of one or mixed types. Each drone's height, speed, loop and radio (frequency, EIRP, bandwidth) can be changed; a new type brings its own radio and cruise speed from `drones.json`. Markers drag; right-click a waypoint to delete it. **Run simulation** sends the scenario to `serve.py`, which writes it to `out/planned.json`, runs the engine and opens the replay. **Download JSON** saves it as a scenario file.
+Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), click to place receivers, and add drones: choose a type and click its waypoints, or add N random drones of one or mixed types. Each drone's height, speed, loop and radio (frequency, EIRP, bandwidth) can be changed; a new type brings its own radio and cruise speed from `drones.json`. Markers drag; right-click a waypoint to delete it. **Run simulation** sends the scenario to `serve.py` (`POST /api/simulate`), which runs it into `out/planned/` and opens the replay. **Download JSON** saves it as a scenario file.
 
-## Replay (`viewer/`)
+## Pro view (`viewer/`)
 
 - **Layers:** the path as the whole flight, flown so far, or the last minute; coloured by drone or by certainty (located by two or more receivers, heard by one only, unseen); an error band as wide as each fix's position error (up to 500 m each side, fading as the error grows); toggles for labels, height lines, bearings, fix circles and receivers; drone size.
 - **Hover** a drone, or its row in the Drones card, to highlight it: it glows, its path comes forward and the others dim. The tooltip gives its height, speed, heading and what the receivers make of it.
 - **Coverage heatmap:** for each drone radio, the chance that a drone at a point would be located (two or more receivers), heard (one or more), or the expected position error. Show one height above ground as a sheet, or all heights at once as a 3D cloud. Darker blue means more certain.
 - Propellers spin while the replay plays.
 
-**Sky Spotters** (`cute/`) plays the same `out/bundle.json` as a game: a hummingbird for the quadcopter, a stork for the recon drone, a swift for the delta wing, a pigeon for the decoy. Huts turn their binoculars to the bearings they measure and shout when they hear a bird; a fix pops a "Spotted!" badge with its error. Click a bird to follow it (Esc returns); `?t=` and `?bird=` deep-link.
+## Simple view: Sky Spotters (`cute/`)
+
+A small game on the same engine. Place your stations (birdwatcher huts) on the map, release the birds, and catch as many as you can before the round ends. A bird is caught the first second two stations cross their bearings on it (a fix). Birds (a hummingbird for the quadcopter, a stork for the recon drone, a swift for the delta wing, a pigeon for the decoy) fly in from the edges at random times, cross and leave. Each station shows how many birds it has seen, how confident it is, and its signal over time. A round is `POST /api/game`; the same stations, bird count and seed always give the same round.
 
 ## Files
 
 | File | What it does |
 |---|---|
-| `scenario.json` | Input: area, start time, duration, seed, receivers, drones and waypoints |
-| `sim.py` | Engine: DEM → truth → radio links → crossed bearings → outputs |
+| `areas.json` | The example areas. To add an area, add a line. The box must stay inside one 1° tile |
+| `scenario.json` | A hand-written example scenario for `sim.py` |
+| `sim.py` | Engine: random layout or game round → DEM → truth → radio links → crossed bearings → coverage → outputs |
+| `serve.py` | Serves the pages and runs the engine for each request: layouts, game rounds, planner scenarios |
 | `flight.py` | Flight model: drone type + flight plan → 10 Hz track with heading, pitch and roll |
 | `drones.json` | Drone types: size, mass, endurance, flight limits, 3D model |
 | `models/` | One GLB model per drone type, plus the Blender scripts that build and render them |
-| `serve.py` | Local server: the pages, plus `POST /api/simulate` for the planner |
 | `planner/index.html` | Scenario planner on a map. One file, Leaflet from a CDN |
-| `cute/index.html` | *Sky Spotters*: the same replay as a cosy bird game. Birds for drones, birdwatcher huts for receivers, same data |
+| `cute/index.html` | Simple view, *Sky Spotters*: place stations, catch birds. Same engine and data |
 | `test_sim.py` | Checks that the physics behaves as it should |
-| `viewer/index.html` | 3D replay. One file, libraries come from a CDN, no build step |
+| `viewer/index.html` | Pro view: 3D replay. One file, libraries come from a CDN, no build step |
+
+## Random layout
+
+- Receivers go on high ground (the top 25% of the inner box). Each new receiver takes the position farthest from the receivers that are already placed.
+- Each drone gets a random type from `drones.json`:
+  - `quadcopter` (50%): 60–120 m above ground, 2.4 GHz
+  - `fixed_wing_recon` (25%), `delta_wing` (15%), `decoy` (10%): 200–400 m above ground, 5.8 GHz
+- Each drone flies a loop of 3–5 random waypoints at the cruise speed of its type.
+- Each receiver and drone has its own random stream from `(seed, kind, index)`. When you add a drone, the others do not move.
 
 ## Drones
 
@@ -91,7 +118,7 @@ blender -b -P models/build.py
 blender -b -P models/render.py -- models/delta_wing.glb frame.png --heading 250 --roll 12 --distance 300 --cam-el 20 --fov 3
 ```
 
-## Outputs (`out/`)
+## Outputs (`out/<area>/`)
 
 | File | Contents | Who sees it |
 |---|---|---|
@@ -129,6 +156,7 @@ When two or more receivers detect the same drone, a weighted least-squares cross
 - A quadcopter keeps to its speed, acceleration and tilt limits, and lands where it took off.
 - A fixed-wing holds an orbit in a 15 m/s wind without passing its bank limit, and its speed over the ground swings by the wind.
 - The same seed gives byte-identical output files.
+- Adding a receiver or a drone does not move the others.
 
 ## Known limits
 
