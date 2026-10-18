@@ -6,20 +6,24 @@ A single LLM prompt can produce numbers that look correct. This engine computes 
 
 The drones fly a kinematic flight model with each type's real limits (speed, acceleration, climb, tilt or bank), so they brake, lean and bank through turns. The viewer shows each one as a 3D model with that attitude.
 
+Plan a scenario on a map (area, receivers, drones), run it, and replay it: how certain the receivers were about each drone along its path, and a coverage heatmap of where a drone would be heard or located at each height.
+
 ![The four drone models, from above and as a ground camera sees them](models/previews/all.png)
 
 ## Run
 
 ```bash
 uv venv && uv pip install -r requirements.txt    # or: pip install -r requirements.txt
-.venv/bin/python serve.py                        # then open http://localhost:8765/viewer/
+.venv/bin/python serve.py                        # then open http://localhost:8765/viewer/ (or /planner/, /cute/)
 .venv/bin/python test_sim.py                     # faithfulness checks
 .venv/bin/python sim.py                          # optional: scenario.json -> out/, no viewer
 ```
 
-1. Choose one of the 4 areas.
+1. Choose one of the 4 areas, or plan your own scenario.
 2. Set the number of receivers and drones. The engine runs again (in a few seconds) and puts them at random positions.
 3. Click **New layout** to get a new seed and new positions.
+
+The switch at the top flips between two views of the same data: **Pro**, the detailed radio view, and **Simple**, *Sky Spotters*, the bird game. Flipping keeps the area, the receivers and the moment.
 
 The first visit to an area downloads part of one Copernicus GLO-30 tile from public S3 (no key). The engine keeps it in `.cache/`.
 
@@ -31,6 +35,27 @@ The URL always holds the current layout, so you can share it. Example: `viewer/?
 - `ground`: `sat`, `map` or `elev`
 - `show`: `truth`, `sensed` or `both`
 - `sel`: a sensor|object pair
+- `heat`: open the coverage heatmap with `located`, `heard` or `err`
+- `play=1`: start playing
+
+Two more sources: `viewer/?game=<area>&huts=<lat,lon;...>&birds=6&seed=3` replays a round of the bird game, and `viewer/?planned=1` shows the last scenario from the planner.
+
+## Planner (`planner/`)
+
+Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), click to place receivers, and add drones: choose a type and click its waypoints, or add N random drones of one or mixed types. Each drone's height, speed, loop and radio (frequency, EIRP, bandwidth) can be changed; a new type brings its own radio and cruise speed from `drones.json`. Markers drag; right-click a waypoint to delete it. **Run simulation** sends the scenario to `serve.py` (`POST /api/simulate`), which runs it into `out/planned/` and opens the replay. **Download JSON** saves it as a scenario file.
+
+## Pro view (`viewer/`)
+
+- **Sensors** are drawn as 3D models of their type (`models/sensors/`). Each has a card with its signal over time, and a click on a drone row opens the full breakdown for that moment.
+- **Layers:** the path as the whole flight, flown so far, or the last minute; coloured by drone or by certainty (located, detected by one sensor only, unseen); an error band as wide as each fix's position error (up to 500 m each side, fading as the error grows); toggles for labels, height lines, bearings, fix circles and sensors; drone size.
+- **Hover** a drone, or its row in the Drones card, to highlight it: it glows, its path comes forward and the others dim. The tooltip gives its height, speed, heading and what the sensors make of it.
+- **Coverage heatmap:** for each drone radio, the chance that a drone at a point would be located (two or more radio receivers), heard (one or more), or the expected position error. It covers the radio receivers only. Show one height above ground as a sheet, or all heights at once as a 3D cloud. Darker blue means more certain.
+- Propellers spin while the replay plays.
+- **Scenario settings** (under the receiver and drone counts): round length, drone mix (balanced, mostly quadcopters, mostly fixed-wing, attack wave), receiver mast height, bearing accuracy, shadowing and wind. Each change runs the engine again; values that differ from the defaults go into the URL (`duration_s`, `mix`, `mast_m`, `bearing_sigma_deg`, `shadowing_db`, `wind_from_deg`, `wind_mps`). `POST /api/run` takes them as `settings`.
+
+## Simple view: Sky Spotters (`cute/`)
+
+A small game on the same engine. Place your stations (birdwatcher huts) on the map, release the birds, and catch as many as you can before the round ends. A bird is caught the first second two stations cross their bearings on it (a fix). Birds (a hummingbird for the quadcopter, a stork for the recon drone, a swift for the delta wing, a pigeon for the decoy) fly in from the edges at random times, cross and leave. Each station shows how many birds it has seen, how confident it is, and its signal over time. A round is `POST /api/game`; the same stations, bird count and seed always give the same round. The stations are radio receivers only.
 
 ## Files
 
@@ -38,14 +63,16 @@ The URL always holds the current layout, so you can share it. Example: `viewer/?
 |---|---|
 | `areas.json` | The example areas. To add an area, add a line. The box must stay inside one 1° tile |
 | `scenario.json` | A hand-written example scenario for `sim.py`, with one sensor of each type |
-| `sim.py` | Engine: random layout → DEM → truth → sensor links → fixes → outputs |
-| `serve.py` | Serves the viewer and runs the engine for each request |
+| `sim.py` | Engine: random layout or game round → DEM → truth → sensor links → fixes → coverage → outputs |
+| `serve.py` | Serves the pages and runs the engine for each request: layouts, game rounds, planner scenarios |
 | `flight.py` | Flight model: drone type + flight plan → 10 Hz track with heading, pitch and roll |
 | `drones.json` | Drone types: size, mass, endurance, flight limits, radar, heat and sound signature, 3D model |
 | `models/` | One GLB model per drone type, plus the Blender scripts that build and render them |
 | `models/sensors/` | One GLB model per sensor type, built by `models/build_sensors.py` (standard library only) |
+| `planner/index.html` | Scenario planner on a map. One file, Leaflet from a CDN |
+| `cute/index.html` | Simple view, *Sky Spotters*: place stations, catch birds. Same engine and data |
 | `test_sim.py` | Checks that the physics behaves as it should |
-| `viewer/index.html` | 3D replay. One file, libraries come from a CDN, no build step |
+| `viewer/index.html` | Pro view: 3D replay. One file, libraries come from a CDN, no build step |
 
 ## Random layout
 
@@ -112,7 +139,7 @@ blender -b -P models/render.py -- models/delta_wing.glb frame.png --heading 250 
 | `remote_id_budget.csv` | Link budget of the Remote ID broadcast, every second | Explanation |
 | `fused.cot.xml` | Positions from crossed bearings, a radar's range + bearing, or a Remote ID message, as TAK Cursor on Target events | Sensor data |
 | `fused.csv` | The same fixes, with `source_object_id`, `method` and the error against the truth | Answer key |
-| `bundle.json` | Everything the viewer needs | Viewer |
+| `bundle.json` | Everything the viewer needs, including the coverage grids | Viewer |
 
 Every sensor record has a `source_object_id` column. All files use the same UTC clock.
 
@@ -128,6 +155,8 @@ For each receiver, each drone and each second:
 6. Bearing = true bearing + fixed receiver bias + noise. The noise grows as the SNR drops.
 
 When two or more receivers detect the same drone, a weighted least-squares crossing gives a position. `ce` comes from the covariance of that solution.
+
+**Coverage** uses the same physics on a grid (40 cells across, at 50, 100, 250, 500 and 1,000 m above ground by default; set `"coverage": {"grid": 40, "alts_agl_m": [...]}` in the scenario). For each radio receiver it computes the mean SNR, then the chance of detection given the log-normal shadowing: Φ((SNR − threshold) / σ). Heard = at least one receiver detects, located = at least two. The expected error is `ce` of a crossing by every receiver that probably hears the point. Each distinct drone radio gets its own grids. The other sensor types are not in the coverage grids yet.
 
 ## Radar model
 
@@ -171,6 +200,8 @@ A cooperative drone (`"remote_id": true`) broadcasts its own position, altitude,
 
 Every sensor that measures a bearing (radio receivers, cameras, microphone arrays) joins the same weighted crossing, so cameras and microphones can locate a drone that does not transmit. A radar detection or a Remote ID message is a fix by itself. The viewer shows one fix per drone per second: Remote ID first, then radar, then the crossing.
 
+A drone that appears later (`start_s`) or leaves the area (`leave`) is detected by no sensor while it is away.
+
 ## Checks (`test_sim.py`)
 
 - On flat ground, the loss always increases with distance.
@@ -188,6 +219,9 @@ Every sensor that measures a bearing (radio receivers, cameras, microphone array
 - The same seed gives byte-identical output files.
 - Adding a receiver or a drone does not move the others, including the radar, cameras, microphones and Remote ID receiver.
 - Only quadcopters broadcast Remote ID in a random layout.
+- No sensor of any type detects a drone before it appears; a game bird is heard only while it is in the area.
+- Coverage falls with distance from a receiver; one receiver can hear but never locate; two receivers can.
+- Layout settings reach the scenario, are clamped to safe ranges, and the defaults change nothing.
 
 ## Known limits
 
@@ -207,7 +241,9 @@ Each limit has a `ponytail:` comment in `sim.py` that tells where to extend the 
 - Remote ID uses the open-terrain radio model, so its range in clear line of sight (a few km) is longer than the
   ~1 km often seen near the ground with clutter.
 - Not modelled: ADS-B (it needs manned aircraft, which the scenarios do not have), TDOA, satellite imagery and observer reports.
-- The wind is the same at every height. Propellers do not spin in the viewer.
+- The wind is the same at every height.
+- Coverage ignores receiver bias and the fusion's 10° minimum crossing angle, so it is slightly optimistic where bearings cross shallowly.
+- When a plan ends early, a fixed-wing circles its last waypoint and may leave the area; the terrain is clamped at the edge there.
 
 ## Next tasks
 
