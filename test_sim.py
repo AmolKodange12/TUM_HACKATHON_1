@@ -3,6 +3,7 @@ import filecmp
 import json
 import math
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -74,6 +75,40 @@ def test_radar_fix_with_no_noise_finds_the_target():
     assert np.hypot(*(xy - target)) < 1 and ce > 0
 
 
+def test_ridge_hides_a_drone_from_a_camera():
+    rx, tx = np.array([0.0, -4000.0, 110.0]), np.array([[0.0, 3000.0, 160.0]])
+    z = flat().z.copy()
+    z[95:105, :] = 250.0
+    clear = -sim.profile(flat(), rx, tx)[3].max(axis=1)
+    hidden = -sim.profile(sim.Terrain(z, BBOX), rx, tx)[3].max(axis=1)
+    assert clear[0] > 0 > hidden[0]
+
+
+def test_cameras_get_fewer_pixels_further_away_and_recognise_with_more():
+    px = sim.pixels_on_target(0.35, np.array([500.0, 1000.0, 2000.0]), 6, 1920)
+    assert np.all(np.diff(px) < 0) and abs(px[0] - 2 * px[1]) < 1e-9
+    p = sim.johnson(np.array([4.0, 8.0, 16.0, 1e4]), 8)
+    assert np.all(np.diff(p) > 0) and abs(p[1] - 0.5) < 1e-12 and p[-1] <= 1
+
+
+def test_sun_is_up_at_midday_and_down_at_midnight():
+    noon = sim.sun_elevation(49.74, 31.48, datetime(2026, 6, 21, 9, 56, tzinfo=timezone.utc))
+    night = sim.sun_elevation(49.74, 31.48, datetime(2026, 6, 21, 21, 56, tzinfo=timezone.utc))
+    assert 62 < noon < 65 and night < -15  # 90 - lat +/- 23.4 deg at the solstice
+
+
+def test_sound_points_to_where_the_drone_was():
+    ts = np.arange(0, 120.0)
+    x, y, z = -3000 + 50 * ts, np.full_like(ts, 3000.0), np.full_like(ts, 400.0)  # eastbound, 50 m/s
+    s = {"freq_hz": 500, "absorption_db_per_km": 5, "ambient_db": 40, "mics": 6, "processing_gain_db": 10,
+         "threshold_db": 6, "bearing_sigma_deg": 3.0, "bearing_bias_deg": 0.0}
+    L = sim.acoustic_link(flat(), s, np.array([0.0, 0.0, 102.0]), (x, y, z), DRONES["delta_wing"], ts, 1.0, 0.0,
+                          np.random.default_rng(0))
+    lag = math.hypot(1000, 3000, 298) / sim.SOUND  # at t = 80 s the drone is at x = 1000 m
+    now = math.degrees(math.atan2(1000, 3000))
+    assert abs(L["lag"][80] - lag) < 1e-6 and L["true_bearing"][80] < now - 5
+
+
 def test_crossed_bearings_find_the_target():
     target = np.array([1000.0, 2000.0])
     pts = np.array([[-3000.0, -2000.0], [3000.0, -2000.0]])
@@ -116,7 +151,9 @@ def test_same_seed_same_bytes():
     with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
         sim.run(sc, a)
         sim.run(sc, b)
-        files = ["truth.csv", "rf_raw.csv", "rf_budget.csv", "radar_raw.csv", "radar_budget.csv", "fused.csv", "fused.cot.xml", "bundle.json"]
+        files = ["truth.csv", "rf_raw.csv", "rf_budget.csv", "radar_raw.csv", "radar_budget.csv", "camera_raw.csv",
+                 "camera_budget.csv", "acoustic_raw.csv", "acoustic_budget.csv", "remote_id_raw.csv", "remote_id_budget.csv",
+                 "fused.csv", "fused.cot.xml", "bundle.json"]
         match, mismatch, err = filecmp.cmpfiles(a, b, files, shallow=False)
         assert not mismatch and not err, (mismatch, err)
 
@@ -125,6 +162,12 @@ def test_adding_a_drone_does_not_move_the_others():
     area = {"name": "t", "region": "t", "bbox": BBOX}
     a, b = sim.make_scenario(area, 3, 2, 7), sim.make_scenario(area, 4, 3, 7)
     assert a["sensors"] == b["sensors"][:3] and a["objects"] == b["objects"][:2]
+    assert all(a[k] == b[k] and len(a[k]) > 0 for k in ("radars", "cameras", "acoustic_arrays", "remote_id_receivers"))
+
+
+def test_only_quadcopters_broadcast_remote_id():
+    sc = sim.make_scenario({"name": "t", "region": "t", "bbox": BBOX}, 3, 6, 7)
+    assert all(o["remote_id"] == (o["type"] == "quadcopter") for o in sc["objects"])
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 {
-  "_note": "Rounded public figures for each class, not the spec sheet of one airframe. m, kg, s, m/s, deg. multirotor: max_tilt_deg sets drag, it reaches max_speed_mps at full tilt. fixed_wing: turns by banking (radius = v^2 / (g tan bank)) and holds airspeed. rcs_dbsm is a rough nose-on X-band radar cross-section for the class (RCS varies a lot with aspect angle; this is not a measurement of one airframe).",
+  "_note": "Rounded public figures for each class, not the spec sheet of one airframe. m, kg, s, m/s, deg. multirotor: max_tilt_deg sets drag, it reaches max_speed_mps at full tilt. fixed_wing: turns by banking (radius = v^2 / (g tan bank)) and holds airspeed. rcs_dbsm is a rough nose-on X-band radar cross-section for the class (RCS varies a lot with aspect angle; this is not a measurement of one airframe). thermal_dt_k: how much warmer than the background the drone looks to a thermal camera, averaged over its outline. spl_1m_db: sound level 1 m from the drone. Both are rough class figures.",
   "quadcopter": {
     "name": "Camera quadcopter (DJI Mavic 3 class)",
     "type": "multirotor",
@@ -8,6 +8,8 @@
     "mass_kg": 0.9,
     "endurance_s": 2400,
     "rcs_dbsm": -20,
+    "thermal_dt_k": 3,
+    "spl_1m_db": 80,
     "note": "arms unfolded, without propellers; max speed is sport mode (normal 15 m/s); spec endurance 46 min, ~40 in cold weather",
     "flight": {
       "cruise_speed_mps": 12,
@@ -27,6 +29,8 @@
     "mass_kg": 18,
     "endurance_s": 36000,
     "rcs_dbsm": -10,
+    "thermal_dt_k": 8,
+    "spl_1m_db": 100,
     "note": "claimed endurance up to 16 h; 10 h is a safer figure",
     "flight": {
       "cruise_speed_mps": 30,
@@ -47,6 +51,8 @@
     "mass_kg": 200,
     "endurance_s": 43200,
     "rcs_dbsm": -13,
+    "thermal_dt_k": 15,
+    "spl_1m_db": 115,
     "note": "range ~2,000 km at cruise speed; composite airframe with a small piston engine keeps the RCS low for its size",
     "flight": {
       "cruise_speed_mps": 51,
@@ -67,6 +73,8 @@
     "mass_kg": 18,
     "endurance_s": 21600,
     "rcs_dbsm": -17,
+    "thermal_dt_k": 6,
+    "spl_1m_db": 95,
     "note": "size, mass and speed are rough: public reports vary and the type keeps changing",
     "flight": {
       "cruise_speed_mps": 42,
