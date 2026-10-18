@@ -78,9 +78,8 @@ def fly(drone, obj, xy, wind=np.zeros(2), t_end=math.inf):
         target = np.array(xy(a["lat"], a["lon"])) if kind in ("goto", "orbit") else hold
         nxt = next(iter(plan[i + 1])) if i + 1 < len(plan) else None
         stop = multirotor and kind == "goto" and nxt != "goto"
-        if kind == "orbit" and not multirotor and a["radius_m"] < 1.2 * min_orbit_radius(drone, wind):
-            raise ValueError(f"{obj['id']}: orbit radius {a['radius_m']} m is too tight, needs at least "
-                             f"{1.2 * min_orbit_radius(drone, wind):.0f} m in this wind")
+        if kind == "orbit" and not multirotor and a["radius_m"] < (r_min := 1.2 * min_orbit_radius(drone, wind)):
+            raise ValueError(f"{obj['id']}: orbit radius {a['radius_m']} m is too tight, needs at least {r_min:.0f} m in this wind")
         t_leg, course0 = 0.0, st["psi"]
         while True:
             d_vec = target - st["p"][:2]

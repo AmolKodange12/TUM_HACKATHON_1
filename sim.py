@@ -85,8 +85,9 @@ def track(terrain, obj, ts, drone, wind=np.zeros(2)):
     (lat0, lon0), rest, speed = obj["waypoints"][0], obj["waypoints"][1:], obj["speed_ms"]
     plan = obj.get("plan")
     if plan is None:
-        pts = rest + [[lat0, lon0]] if obj.get("loop") else rest
-        if obj.get("loop"):
+        loop = obj.get("loop") and rest
+        pts = rest + [[lat0, lon0]] if loop else rest
+        if loop:
             xy = np.array([terrain.xy(*p) for p in [[lat0, lon0], *pts]])
             lap = np.hypot(*np.diff(xy, axis=0).T).sum()
             pts = pts * (math.ceil(ts[-1] * speed / lap) + 1)
@@ -162,6 +163,21 @@ def meas_sigma(snr_db, sigma_at_20db, cap):
 def bearing_sigma(snr_db, sigma_at_20db):
     """Bearing noise grows as 1/sqrt(SNR); capped at 30 deg."""
     return meas_sigma(snr_db, sigma_at_20db, 30.0)
+
+
+def noise_dbm(noise_figure_db, bandwidth_mhz):
+    """Thermal noise floor: -174 dBm/Hz + 60 dB (1 MHz) + noise figure + bandwidth."""
+    return -174 + 60 + noise_figure_db + 10 * math.log10(bandwidth_mhz)
+
+
+def bearing_meas(x, y, rx, s, sigma, rng):
+    """True bearing (deg) from rx to x, y, and what the sensor measures: + its fixed bias + noise of sigma deg."""
+    true_b = np.degrees(np.arctan2(x - rx[0], y - rx[1])) % 360
+    return true_b, (true_b + s["bearing_bias_deg"] + rng.normal(0, 1, len(true_b)) * sigma) % 360
+
+
+def drone_types():
+    return json.loads((Path(__file__).parent / "drones.json").read_text())
 
 
 def radar_echo_power(tx_dbm, gain_dbi, fspl_db, diff_db, rcs_dbsm, freq_mhz, integration_gain_db=0.0):
@@ -246,10 +262,9 @@ def camera_link(terrain, s, rx, tr, drone, ts, dt, sc, sun_el, rng):
     scint = shadowing(rng, n, s.get("scintillation_db", 2.0), 10.0, dt)
     margin = np.minimum(20 * np.log10(px / s["px_detect"]), 20 * np.log10(signal / need)) - scint
     sigma = np.full(n, s["bearing_sigma_deg"])
-    true_b = np.degrees(np.arctan2(x - rx[0], y - rx[1])) % 360
+    true_b, bearing = bearing_meas(x, y, rx, s, sigma, rng)
     return dict(
-        snr=margin, det=(margin >= s["threshold_db"]) & (clear >= 0) & lit, sigma=sigma, true_bearing=true_b,
-        bearing=(true_b + s["bearing_bias_deg"] + rng.normal(0, 1, n) * sigma) % 360,
+        snr=margin, det=(margin >= s["threshold_db"]) & (clear >= 0) & lit, sigma=sigma, true_bearing=true_b, bearing=bearing,
         elev=np.degrees(np.arctan2(z - rx[2], d[:, 0])) + rng.normal(0, 1, n) * sigma,
         dist=dist, clear=clear, px=px, signal=signal, need=need, shadow=scint, conf=johnson(px, s["px_recognise"]),
         **({"sun": sun_el} if visible else {}),
@@ -276,11 +291,9 @@ def acoustic_link(terrain, s, rx, tr, drone, ts, dt, wind_mps, rng):
     gain = 10 * math.log10(s["mics"]) + s["processing_gain_db"]
     snr = level + gain - noise
     sigma = bearing_sigma(snr, s["bearing_sigma_deg"])
-    true_b = np.degrees(np.arctan2(xe - rx[0], ye - rx[1])) % 360
+    true_b, bearing = bearing_meas(xe, ye, rx, s, sigma, rng)
     return dict(
-        power=level, snr=snr, det=snr >= s["threshold_db"], sigma=sigma, true_bearing=true_b,
-        bearing=(true_b + s["bearing_bias_deg"] + rng.normal(0, 1, n) * sigma) % 360,
-        dist=dist, lag=lag, spread=spread, absorb=absorb, diff=diff, shadow=shadow, noise=noise, gain=gain,
+        power=level, snr=snr, det=snr >= s["threshold_db"], sigma=sigma, true_bearing=true_b, bearing=bearing, dist=dist, lag=lag, spread=spread, absorb=absorb, diff=diff, shadow=shadow, noise=noise, gain=gain,
         src=drone["spl_1m_db"],
     )
 
@@ -294,7 +307,7 @@ def remote_id_link(terrain, s, rx, o, tr, ts, dt, sc, rng):
     d3, fspl, diff, _ = path_loss(terrain, rx, np.stack([x, y, z], 1), s["freq_mhz"])
     shadow = shadowing(rng, n, sc["shadowing_db"], sc["shadowing_tau_s"], dt)
     power = RID_EIRP_DBM + s["gain_dbi"] - fspl - diff - shadow
-    noise = -174 + 60 + s["noise_figure_db"] + 10 * math.log10(s["bandwidth_mhz"])
+    noise = noise_dbm(s["noise_figure_db"], s["bandwidth_mhz"])
     gnss = lambda: shadowing(rng, n, RID_GNSS_SIGMA_M, 30.0, dt)  # GNSS error drifts slowly
     return dict(
         power=power, snr=power - noise, det=power - noise >= s["threshold_db"], dist=d3, fspl=fspl, diff=diff,
@@ -359,8 +372,7 @@ def coverage(terrain, sensors, emitter, alts, shadowing_db, n=40):
         for s in sensors:
             rx = np.array([s["x"], s["y"], s["z"]])
             _, fspl, diff, _ = path_loss(terrain, rx, tx, emitter["freq_mhz"])
-            noise = -174 + 60 + s["noise_figure_db"] + 10 * math.log10(emitter["bandwidth_mhz"])
-            snr = emitter["eirp_dbm"] + s["gain_dbi"] - fspl - diff - noise
+            snr = emitter["eirp_dbm"] + s["gain_dbi"] - fspl - diff - noise_dbm(s["noise_figure_db"], emitter["bandwidth_mhz"])
             p = p_detect(snr, s["threshold_db"], shadowing_db)
             ps.append(p)
             b = np.arctan2(gx - s["x"], gy - s["y"])
@@ -403,6 +415,20 @@ SETTINGS = {"duration_s": 1200, "shadowing_db": 4.0, "mix": "balanced", "mast_m"
             "wind_from_deg": 270, "wind_mps": 0}
 
 
+def receiver(i, lat, lon, mast, sigma, rng):
+    """RF receiver i; its fixed bearing bias comes from its own RNG stream."""
+    return {"id": f"RF{i + 1}", "lat": round(float(lat), 5), "lon": round(float(lon), 5), "mast_m": mast,
+            "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": sigma,
+            "bearing_bias_deg": round(float(rng.normal(0, 1)), 1)}
+
+
+def radio_and_height(i, quad, rng):
+    """Radio and height above ground of drone i in a random layout: 2.4 GHz quadcopters, 5.8 GHz for the rest."""
+    return {"freq_mhz": [2412.0, 2437.0, 2462.0][i % 3] if quad else [5745.0, 5785.0, 5825.0][i % 3],
+            "eirp_dbm": 27 if quad else 30, "bandwidth_mhz": 10 if quad else 20,
+            "alt_agl_m": int(rng.integers(60, 121)) if quad else int(rng.integers(200, 401))}
+
+
 def scenario_settings(given=None):
     """Layout settings with defaults, clamped to ranges the engine and the viewer handle well."""
     st = {**SETTINGS, **(given or {})}
@@ -436,28 +462,19 @@ def make_scenario(area, n_rx, n_drones, seed, settings=None):
         if placed:  # farthest of 200 samples from the receivers already placed
             pick = pick[[np.argmax(np.linalg.norm(pick[:, None] - np.array(placed)[None], axis=2).min(1))]]
         placed.append(pick[0])
-        lat, lon = terrain.latlon(*pick[0])
-        sensors.append({"id": f"RF{i + 1}", "lat": round(float(lat), 5), "lon": round(float(lon), 5), "mast_m": st["mast_m"],
-                        "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": st["bearing_sigma_deg"],
-                        "bearing_bias_deg": round(float(rng.normal(0, 1)), 1)})
+        sensors.append(receiver(i, *terrain.latlon(*pick[0]), st["mast_m"], st["bearing_sigma_deg"], rng))
 
-    drones = json.loads((Path(__file__).parent / "drones.json").read_text())
-    types, weights = TYPES, MIXES[st["mix"]]
+    drones = drone_types()
     objects, xmax, ymax = [], -terrain.xw * 0.8, terrain.yn * 0.8
     for i in range(n_drones):
         rng = np.random.default_rng([seed, 1, i])
-        kind = types[rng.choice(len(types), p=weights)]
+        kind = TYPES[rng.choice(len(TYPES), p=MIXES[st["mix"]])]
         quad = drones[kind]["type"] == "multirotor"
         n = int(rng.integers(3, 6))
         lat, lon = terrain.latlon(rng.uniform(-xmax, xmax, n), rng.uniform(-ymax, ymax, n))
-        objects.append({
-            "id": f"drone_{i + 1:02d}", "type": kind,
-            "freq_mhz": [2412.0, 2437.0, 2462.0][i % 3] if quad else [5745.0, 5785.0, 5825.0][i % 3],
-            "eirp_dbm": 27 if quad else 30, "bandwidth_mhz": 10 if quad else 20,
-            "alt_agl_m": int(rng.integers(60, 121)) if quad else int(rng.integers(200, 401)),
-            "speed_ms": drones[kind]["flight"]["cruise_speed_mps"], "loop": True, "remote_id": quad,
-            "waypoints": [[round(float(a), 5), round(float(b), 5)] for a, b in zip(lat, lon)],
-        })
+        objects.append({"id": f"drone_{i + 1:02d}", "type": kind, **radio_and_height(i, quad, rng),
+                        "speed_ms": drones[kind]["flight"]["cruise_speed_mps"], "loop": True, "remote_id": quad,
+                        "waypoints": [[round(float(a), 5), round(float(b), 5)] for a, b in zip(lat, lon)]})
 
     def spot(k, high):  # own RNG stream per sensor, so changing the counts never moves it
         rng = np.random.default_rng([seed, 2, k])
@@ -491,20 +508,16 @@ def make_game(area, huts, n_birds, seed, duration_s=600):
     sensors = []
     for i, hut in enumerate(huts):
         lat, lon = hut[0], hut[1]
-        mast = min(max(float(hut[2]), 2.0), 40.0) if len(hut) > 2 else 10.0
         if not (south <= lat <= north and west <= lon <= east):
             raise ValueError(f"station {i + 1} is outside the area")
-        rng = np.random.default_rng([seed, 0, i])
-        sensors.append({"id": f"RF{i + 1}", "lat": round(float(lat), 5), "lon": round(float(lon), 5), "mast_m": mast,
-                        "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": 2.0,
-                        "bearing_bias_deg": round(float(rng.normal(0, 1)), 1)})
+        mast = min(max(float(hut[2]), 2.0), 40.0) if len(hut) > 2 else 10.0
+        sensors.append(receiver(i, lat, lon, mast, 2.0, np.random.default_rng([seed, 0, i])))
 
-    drones = json.loads((Path(__file__).parent / "drones.json").read_text())
-    types, weights = ["quadcopter", "fixed_wing_recon", "delta_wing", "decoy"], [0.4, 0.3, 0.2, 0.1]
+    drones = drone_types()
     xmax, ymax, objects = -terrain.xw * 0.92, terrain.yn * 0.92, []
     for i in range(n_birds):
         rng = np.random.default_rng([seed, 1, i])
-        kind = types[rng.choice(len(types), p=weights)]
+        kind = TYPES[rng.choice(len(TYPES), p=[0.4, 0.3, 0.2, 0.1])]
         quad = drones[kind]["type"] == "multirotor"
         side_in = int(rng.integers(4))
         side_out = (side_in + int(rng.integers(1, 4))) % 4  # leave by any other edge
@@ -513,15 +526,10 @@ def make_game(area, huts, n_birds, seed, duration_s=600):
                + [(rng.uniform(-0.6, 0.6) * xmax, rng.uniform(-0.6, 0.6) * ymax) for _ in range(int(rng.integers(1, 3)))]
                + [edge(side_out, rng.uniform(-0.8, 0.8))])
         lat, lon = terrain.latlon(*np.array(pts).T)
-        objects.append({
-            "id": f"drone_{i + 1:02d}", "type": kind, "leave": True,
-            "start_s": float(round(rng.uniform(0, duration_s * 0.6))),
-            "freq_mhz": [2412.0, 2437.0, 2462.0][i % 3] if quad else [5745.0, 5785.0, 5825.0][i % 3],
-            "eirp_dbm": 27 if quad else 30, "bandwidth_mhz": 10 if quad else 20,
-            "alt_agl_m": int(rng.integers(60, 121)) if quad else int(rng.integers(200, 401)),
-            "speed_ms": drones[kind]["flight"]["cruise_speed_mps"],
-            "waypoints": [[round(float(a), 5), round(float(b), 5)] for a, b in zip(lat, lon)],
-        })
+        objects.append({"id": f"drone_{i + 1:02d}", "type": kind, "leave": True,
+                        "start_s": float(round(rng.uniform(0, duration_s * 0.6))), **radio_and_height(i, quad, rng),
+                        "speed_ms": drones[kind]["flight"]["cruise_speed_mps"],
+                        "waypoints": [[round(float(a), 5), round(float(b), 5)] for a, b in zip(lat, lon)]})
 
     return {"name": area["name"], "region": area["region"], "bbox": area["bbox"], "start_utc": "2026-11-03T14:00:00Z",
             "duration_s": duration_s, "dt_s": 1.0, "seed": seed, "shadowing_db": 4.0, "shadowing_tau_s": 15.0,
@@ -547,7 +555,7 @@ def run(sc, out_dir):
     ts = np.arange(0, sc["duration_s"], dt)
     start = datetime.fromisoformat(sc["start_utc"].replace("Z", "+00:00"))
     iso = lambda t: (start + timedelta(seconds=float(t))).strftime("%Y-%m-%dT%H:%M:%SZ")
-    drones = json.loads((Path(__file__).parent / "drones.json").read_text())
+    drones = drone_types()
     wind = flight.wind_xy(sc.get("wind"))
     for o in sc["objects"]:
         if o["type"] not in drones or o["type"].startswith("_"):
@@ -557,38 +565,28 @@ def run(sc, out_dir):
     sc["objects"] = [{**{k: v for k, v in drones[o["type"]]["emitter"].items() if k != "what"},
                       "speed_ms": drones[o["type"]]["flight"]["cruise_speed_mps"], **o} for o in sc["objects"]]
 
-    truth = {}
-    with open(out / "truth.csv", "w", newline="") as fh:
-        wr = csv.writer(fh)
-        wr.writerow(["time_utc", "t_s", "object_id", "lat", "lon", "alt_msl_m", "alt_agl_m", "heading_deg",
-                     "pitch_deg", "roll_deg", "speed_ms"])
-        for o in sc["objects"]:
-            x, y, z, hd, pitch, roll, agl, speed, present, vx, vy = truth[o["id"]] = track(terrain, o, ts, drones[o["type"]], wind)
-            lat, lon = terrain.latlon(x, y)
-            for i, t in enumerate(ts):
-                if not present[i]:
-                    continue
-                wr.writerow([iso(t), t, o["id"], f"{lat[i]:.6f}", f"{lon[i]:.6f}", f"{z[i]:.1f}", f"{agl[i]:.1f}",
-                             f"{hd[i]:.1f}", f"{pitch[i]:.1f}", f"{roll[i]:.1f}", f"{speed[i]:.1f}"])
+    truth = {o["id"]: track(terrain, o, ts, drones[o["type"]], wind) for o in sc["objects"]}
+    write_csv(out / "truth.csv", ["time_utc", "t_s", "object_id", "lat", "lon", "alt_msl_m", "alt_agl_m", "heading_deg",
+                                  "pitch_deg", "roll_deg", "speed_ms"],
+              ([iso(t), t, oid, f"{lat[i]:.6f}", f"{lon[i]:.6f}", f"{z[i]:.1f}", f"{agl[i]:.1f}",
+                f"{hd[i]:.1f}", f"{pitch[i]:.1f}", f"{roll[i]:.1f}", f"{speed[i]:.1f}"]
+               for oid, (x, y, z, hd, pitch, roll, agl, speed, present, *_) in truth.items()
+               for lat, lon in [terrain.latlon(x, y)] for i, t in enumerate(ts) if present[i]))
 
     sensors, links = [], {}
     for si, s in enumerate(sc["sensors"]):
-        sx, sy = terrain.xy(s["lat"], s["lon"])
-        rx = np.array([sx, sy, float(terrain.h(sx, sy)) + s["mast_m"]])
-        sensors.append({**s, "x": sx, "y": sy, "z": rx[2], "kind": "rf"})
-        noise_dbm = -174 + 60 + s["noise_figure_db"]  # +60 = 10*log10(1 MHz), scaled per emitter below
+        rx, entry = site(terrain, s, "rf")
+        sensors.append(entry)
         for oi, o in enumerate(sc["objects"]):
             rng = np.random.default_rng([sc["seed"], si, oi])
             x, y, z = truth[o["id"]][:3]
-            tx = np.stack([x, y, z], 1)
-            d3, fspl, diff, v = path_loss(terrain, rx, tx, o["freq_mhz"])
+            d3, fspl, diff, v = path_loss(terrain, rx, np.stack([x, y, z], 1), o["freq_mhz"])
             shadow = shadowing(rng, len(ts), sc["shadowing_db"], sc["shadowing_tau_s"], dt)
             power = o["eirp_dbm"] + s["gain_dbi"] - fspl - diff - shadow
-            noise = noise_dbm + 10 * math.log10(o["bandwidth_mhz"])
+            noise = noise_dbm(s["noise_figure_db"], o["bandwidth_mhz"])
             snr = power - noise
             sigma = bearing_sigma(snr, s["bearing_sigma_deg"])
-            true_b = np.degrees(np.arctan2(x - sx, y - sy)) % 360
-            bearing = (true_b + s["bearing_bias_deg"] + rng.normal(0, 1, len(ts)) * sigma) % 360
+            true_b, bearing = bearing_meas(x, y, rx, s, sigma, rng)
             links[(s["id"], o["id"])] = dict(
                 power=power, snr=snr, det=(snr >= s["threshold_db"]) & truth[o["id"]][8], bearing=bearing, sigma=sigma,
                 true_bearing=true_b, dist=d3, fspl=fspl, diff=diff, shadow=shadow, v=v, noise=noise,
@@ -598,10 +596,9 @@ def run(sc, out_dir):
     # gives a position fix (range + bearing), no crossing with another sensor needed.
     radars, radar_links = [], {}
     for ri, s in enumerate(sc.get("radars", [])):
-        sx, sy = terrain.xy(s["lat"], s["lon"])
-        rx = np.array([sx, sy, float(terrain.h(sx, sy)) + s["mast_m"]])
-        radars.append({**s, "x": sx, "y": sy, "z": rx[2], "kind": "radar"})
-        noise_dbm = -174 + 60 + s["noise_figure_db"] + 10 * math.log10(s["bandwidth_mhz"])
+        rx, entry = site(terrain, s, "radar")
+        radars.append(entry)
+        noise = noise_dbm(s["noise_figure_db"], s["bandwidth_mhz"])
         for oi, o in enumerate(sc["objects"]):
             rng = np.random.default_rng([sc["seed"], 100 + ri, oi])
             x, y, z = truth[o["id"]][:3]
@@ -612,11 +609,10 @@ def run(sc, out_dir):
             shadow = shadowing(rng, len(ts), sc["shadowing_db"], sc["shadowing_tau_s"], dt)
             power = radar_echo_power(s["tx_power_dbm"], s["gain_dbi"], fspl, diff, rcs_dbsm, s["freq_mhz"],
                                       s.get("integration_gain_db", 0.0)) - shadow
-            snr = power - noise_dbm
+            snr = power - noise
             det = (snr >= s["threshold_db"]) & truth[o["id"]][8]
             sigma = bearing_sigma(snr, s["bearing_sigma_deg"])
-            true_b = np.degrees(np.arctan2(x - sx, y - sy)) % 360
-            bearing = (true_b + s["bearing_bias_deg"] + rng.normal(0, 1, len(ts)) * sigma) % 360
+            true_b, bearing = bearing_meas(x, y, rx, s, sigma, rng)
             range_sigma = meas_sigma(snr, s["range_sigma_m"], 2000.0)
             rng_meas = d3 + rng.normal(0, 1, len(ts)) * range_sigma
             radial_true = radial_velocity(rx, tx, vx, vy)
@@ -624,7 +620,7 @@ def run(sc, out_dir):
             radial = radial_true + rng.normal(0, 1, len(ts)) * radial_sigma
             radar_links[(s["id"], o["id"])] = dict(
                 power=power, snr=snr, det=det, bearing=bearing, sigma=sigma, true_bearing=true_b,
-                dist=d3, fspl=2 * fspl, diff=2 * diff, shadow=shadow, v=v, noise=noise_dbm,
+                dist=d3, fspl=2 * fspl, diff=2 * diff, shadow=shadow, v=v, noise=noise,
                 range=rng_meas, range_sigma=range_sigma, radial=radial, radial_true=radial_true, doppler=-2 * radial / (C / (s["freq_mhz"] * 1e6)),
             )
 
@@ -656,51 +652,28 @@ def run(sc, out_dir):
     by_kind = lambda *kinds: [(s, o, other_links[(s["id"], o["id"])]) for s in cameras + acoustics + rid_rxs
                               if s["kind"] in kinds for o in sc["objects"] if (s["id"], o["id"]) in other_links]
 
-    # What each receiver actually reports: detections only.
-    with open(out / "rf_raw.csv", "w", newline="") as fh:
-        wr = csv.writer(fh)
-        wr.writerow(["time_utc", "t_s", "sensor_id", "freq_mhz", "power_dbm", "snr_db", "bearing_deg", "source_object_id"])
-        for i, t in enumerate(ts):
-            for (sid, oid), L in links.items():
-                if L["det"][i]:
-                    freq = next(o["freq_mhz"] for o in sc["objects"] if o["id"] == oid)
-                    wr.writerow([iso(t), t, sid, freq, f"{L['power'][i]:.1f}", f"{L['snr'][i]:.1f}", f"{L['bearing'][i]:.1f}", oid])
-
-    # Why each value is what it is: full link budget for every tick, detected or not.
-    with open(out / "rf_budget.csv", "w", newline="") as fh:
-        wr = csv.writer(fh)
-        wr.writerow(["t_s", "sensor_id", "object_id", "dist_m", "fspl_db", "diffraction_db", "shadow_db", "fresnel_v",
-                     "power_dbm", "noise_dbm", "snr_db", "detected", "true_bearing_deg", "bearing_sigma_deg"])
-        for (sid, oid), L in links.items():
-            for i, t in enumerate(ts):
-                wr.writerow([t, sid, oid, f"{L['dist'][i]:.0f}", f"{L['fspl'][i]:.1f}", f"{L['diff'][i]:.1f}", f"{L['shadow'][i]:.1f}",
-                             f"{L['v'][i]:.2f}", f"{L['power'][i]:.1f}", f"{L['noise']:.1f}", f"{L['snr'][i]:.1f}", int(L["det"][i]),
-                             f"{L['true_bearing'][i]:.1f}", f"{L['sigma'][i]:.1f}"])
-
-    # What each radar actually reports: detections only. A direct range+bearing fix, no second radar needed.
-    with open(out / "radar_raw.csv", "w", newline="") as fh:
-        wr = csv.writer(fh)
-        wr.writerow(["time_utc", "t_s", "radar_id", "range_m", "bearing_deg", "radial_velocity_mps", "snr_db", "source_object_id"])
-        for i, t in enumerate(ts):
-            for (sid, oid), L in radar_links.items():
-                if L["det"][i]:
-                    wr.writerow([iso(t), t, sid, f"{L['range'][i]:.0f}", f"{L['bearing'][i]:.1f}", f"{L['radial'][i]:.1f}",
-                                 f"{L['snr'][i]:.1f}", oid])
-
-    # Why each radar value is what it is: full two-way link budget for every tick, detected or not.
-    with open(out / "radar_budget.csv", "w", newline="") as fh:
-        wr = csv.writer(fh)
-        wr.writerow(["t_s", "radar_id", "object_id", "dist_m", "two_way_fspl_db", "two_way_diffraction_db", "shadow_db",
-                     "power_dbm", "noise_dbm", "snr_db", "detected", "true_bearing_deg", "bearing_sigma_deg",
-                     "range_sigma_m", "radial_velocity_true_mps", "doppler_hz"])
-        for (sid, oid), L in radar_links.items():
-            for i, t in enumerate(ts):
-                wr.writerow([t, sid, oid, f"{L['dist'][i]:.0f}", f"{L['fspl'][i]:.1f}", f"{L['diff'][i]:.1f}", f"{L['shadow'][i]:.1f}",
-                             f"{L['power'][i]:.1f}", f"{L['noise']:.1f}", f"{L['snr'][i]:.1f}", int(L["det"][i]),
-                             f"{L['true_bearing'][i]:.1f}", f"{L['sigma'][i]:.1f}", f"{L['range_sigma'][i]:.1f}",
-                             f"{L['radial_true'][i]:.1f}", f"{L['doppler'][i]:.0f}"])
-
-    # Cameras: azimuth, elevation and a class with a confidence. Detections only, then the full budget.
+    # Each sensor type: what it reports (detections only), then why each value is what it is (every second).
+    freq = {o["id"]: o["freq_mhz"] for o in sc["objects"]}
+    write_csv(out / "rf_raw.csv", ["time_utc", "t_s", "sensor_id", "freq_mhz", "power_dbm", "snr_db", "bearing_deg", "source_object_id"],
+              ([iso(t), t, sid, freq[oid], f"{L['power'][i]:.1f}", f"{L['snr'][i]:.1f}", f"{L['bearing'][i]:.1f}", oid]
+               for i, t in enumerate(ts) for (sid, oid), L in links.items() if L["det"][i]))
+    write_csv(out / "rf_budget.csv", ["t_s", "sensor_id", "object_id", "dist_m", "fspl_db", "diffraction_db", "shadow_db", "fresnel_v",
+                                      "power_dbm", "noise_dbm", "snr_db", "detected", "true_bearing_deg", "bearing_sigma_deg"],
+              ([t, sid, oid, f"{L['dist'][i]:.0f}", f"{L['fspl'][i]:.1f}", f"{L['diff'][i]:.1f}", f"{L['shadow'][i]:.1f}",
+                f"{L['v'][i]:.2f}", f"{L['power'][i]:.1f}", f"{L['noise']:.1f}", f"{L['snr'][i]:.1f}", int(L["det"][i]),
+                f"{L['true_bearing'][i]:.1f}", f"{L['sigma'][i]:.1f}"]
+               for (sid, oid), L in links.items() for i, t in enumerate(ts)))
+    write_csv(out / "radar_raw.csv", ["time_utc", "t_s", "radar_id", "range_m", "bearing_deg", "radial_velocity_mps", "snr_db", "source_object_id"],
+              ([iso(t), t, sid, f"{L['range'][i]:.0f}", f"{L['bearing'][i]:.1f}", f"{L['radial'][i]:.1f}", f"{L['snr'][i]:.1f}", oid]
+               for i, t in enumerate(ts) for (sid, oid), L in radar_links.items() if L["det"][i]))
+    write_csv(out / "radar_budget.csv", ["t_s", "radar_id", "object_id", "dist_m", "two_way_fspl_db", "two_way_diffraction_db", "shadow_db",
+                                         "power_dbm", "noise_dbm", "snr_db", "detected", "true_bearing_deg", "bearing_sigma_deg",
+                                         "range_sigma_m", "radial_velocity_true_mps", "doppler_hz"],
+              ([t, sid, oid, f"{L['dist'][i]:.0f}", f"{L['fspl'][i]:.1f}", f"{L['diff'][i]:.1f}", f"{L['shadow'][i]:.1f}",
+                f"{L['power'][i]:.1f}", f"{L['noise']:.1f}", f"{L['snr'][i]:.1f}", int(L["det"][i]),
+                f"{L['true_bearing'][i]:.1f}", f"{L['sigma'][i]:.1f}", f"{L['range_sigma'][i]:.1f}",
+                f"{L['radial_true'][i]:.1f}", f"{L['doppler'][i]:.0f}"]
+               for (sid, oid), L in radar_links.items() for i, t in enumerate(ts)))
     cams, mics, rids = by_kind("eo", "ir"), by_kind("acoustic"), by_kind("remote_id")
     write_csv(out / "camera_raw.csv",
               ["time_utc", "t_s", "camera_id", "band", "azimuth_deg", "elevation_deg", "class", "confidence", "source_object_id"],
@@ -823,20 +796,13 @@ def run(sc, out_dir):
     digits = {"conf": 2, "px": 2, "signal": 4, "need": 4}  # everything else: 0.1
     internal = {"true_bearing", "v", "radial_true", "rep_x", "rep_y", "sun"}  # in the CSVs or as fixes already
 
-    def export(L):
-        e = {}
-        for k, v in L.items():
-            if k in internal:
-                continue
-            if k == "det":
-                e[k] = [int(b) for b in v]
-            elif isinstance(v, np.ndarray):
-                e[k] = [round(float(x), digits.get(k, 1)) for x in v]
-            elif isinstance(v, float):
-                e[k] = round(v, digits.get(k, 1))
-            else:
-                e[k] = v
-        return e
+    def jsonable(k, v):
+        if k == "det":
+            return [int(b) for b in v]
+        if isinstance(v, np.ndarray):
+            return [round(float(x), digits.get(k, 1)) for x in v]
+        return round(v, digits.get(k, 1)) if isinstance(v, float) else v
+    export = lambda L: {k: jsonable(k, v) for k, v in L.items() if k not in internal}
 
     tj, frame = terrain_json(terrain, 256)
     bundle = {

@@ -1,14 +1,12 @@
 # Mirror World
 
-A synthetic scenario generator for aerial objects over real terrain in Ukraine. You give it a scenario file. It gives back the truth (where each drone was) and the data that each sensor recorded (radio receivers, radar, daylight and thermal cameras, microphone arrays, Remote ID), on one shared clock.
+A synthetic scenario generator for aerial objects over real terrain in Ukraine. You give it a scenario. It gives back the truth (where each drone was) and what each sensor recorded (radio receivers, radar, daylight and thermal cameras, microphone arrays, Remote ID), on one shared clock.
 
-A single LLM prompt can produce numbers that look correct. This engine computes every value from the terrain and the physics of each sensor, so you can explain every record. Click a sensor row in the viewer to see the full breakdown for that moment.
+![The Pro view: real terrain, sensors, drone paths with their position fixes, and each receiver's signal over time](docs/pro-view.jpg)
 
-The drones fly a kinematic flight model with each type's real limits (speed, acceleration, climb, tilt or bank), so they brake, lean and bank through turns. The viewer shows each one as a 3D model with that attitude.
+**Why it is useful:** training and testing a counter-drone system needs sensor data with the answer key, and real data is scarce. A single LLM prompt can produce numbers that look correct; this engine computes every value from the terrain and the physics of each sensor, so every record can be explained (click a sensor row in the viewer for the full breakdown). The same scenario and seed always give byte-identical files, and the fixes come out as standard TAK Cursor on Target events.
 
-Plan a scenario on a map (area, receivers, drones), run it, and replay it: how certain the receivers were about each drone along its path, and a coverage heatmap of where a drone would be heard or located at each height.
-
-![The four drone models, from above and as a ground camera sees them](models/previews/all.png)
+**How to use it:** start `serve.py`, pick an area, set the receivers and drones (or plan your own scenario on a map), replay it, and click **Export data (.zip)** to get the sensor files, the answer key and the scenario. The drones fly a kinematic flight model with each type's real limits, so they brake, lean and bank through turns.
 
 ## Run
 
@@ -47,16 +45,7 @@ Two more sources: `viewer/?game=<area>&huts=<lat,lon;...>&birds=6&seed=3` replay
 - every CSV and `fused.cot.xml` from the run,
 - `scenario.json`: run `python sim.py scenario.json out` to get byte-identical files again,
 - `manifest.json`: the scenario facts, the sensors, the engine commit, and for each file its role, row count and a description,
-- `README.txt`: a short guide to the roles.
-
-Each file has one role:
-
-| Role | Files | Use |
-|---|---|---|
-| sensor data | `*_raw.csv`, `fused.cot.xml` | What the sensors report. `source_object_id` is the label |
-| answer key | `truth.csv`, `fused.csv` | The truth. Keep it away from a model under test |
-| explanation | `*_budget.csv` | Why each value is what it is, for every second |
-| input | `scenario.json` | The exact scenario and seed |
+- `README.txt`: a short guide to the roles (sensor data, answer key, explanation, input), as in the outputs table below. Keep the answer key away from a model under test.
 
 ## Planner (`planner/`)
 
@@ -93,6 +82,7 @@ A small game on the same engine. The goal is **network confidence**: each statio
 | `flight.py` | Flight model: drone type + flight plan → 10 Hz track with heading, pitch and roll |
 | `drones.json` | Drone types: size, mass, endurance, flight limits, radar, heat and sound signature, 3D model |
 | `models/` | One GLB model per drone type, plus the Blender scripts that build and render them |
+| `docs/` | The pitch deck (`pitch.pdf`) and the images in this README |
 | `models/sensors/` | One GLB model per sensor type, built by `models/build_sensors.py` (standard library only) |
 | `planner/index.html` | Scenario planner on a map. One file, Leaflet from a CDN |
 | `cute/index.html` | Simple view, *Sky Spotters*: place stations, catch birds. Same engine and data |
@@ -121,6 +111,8 @@ Each object's `type` is a key in `drones.json`:
 | `decoy` | Gerbera | 2.4 m span, 18 kg | 42 m/s (47) | banking up to 30°; rough figures |
 
 The figures are rounded public numbers for the class, not the spec sheet of one airframe.
+
+![The four drone models, from above and as a ground camera sees them](docs/drone-models.png)
 
 A drone starts at `waypoints[0]`, at `alt_agl_m` and `speed_ms`, and flies to each further waypoint (`loop` repeats them). For other trajectories, give a `plan` instead of more waypoints, as a list of legs:
 
@@ -229,24 +221,7 @@ A drone that appears later (`start_s`) or leaves the area (`leave`) is detected 
 
 ## Checks (`test_sim.py`)
 
-- On flat ground, the loss always increases with distance.
-- A 150 m ridge between the receiver and the drone adds more than 15 dB of loss.
-- Bearing noise grows as the SNR drops.
-- Crossed bearings with no noise find the exact target.
-- Radar echo power falls with distance; a closing target has negative radial velocity, a receding one positive.
-- A radar range+bearing fix with no noise finds the exact target.
-- A ridge hides a drone from a camera that sees it over flat ground.
-- A camera gets fewer pixels on a drone further away, and the recognition confidence rises with pixels (50% at `px_recognise`).
-- The sun is up at local noon and down at midnight, at the right elevation.
-- A microphone array points to where a fast drone was when the sound left it, not to where it is.
-- A quadcopter keeps to its speed, acceleration and tilt limits, and lands where it took off.
-- A fixed-wing holds an orbit in a 15 m/s wind without passing its bank limit, and its speed over the ground swings by the wind.
-- The same seed gives byte-identical output files.
-- Adding a receiver or a drone does not move the others, including the radar, cameras, microphones and Remote ID receiver.
-- Only quadcopters broadcast Remote ID in a random layout.
-- No sensor of any type detects a drone before it appears; a game bird is heard only while it is in the area.
-- Coverage falls with distance from a receiver; one receiver can hear but never locate; two receivers can.
-- Layout settings reach the scenario, are clamped to safe ranges, and the defaults change nothing.
+21 checks that the physics behaves as it should: radio loss over distance and ridges, bearing noise, crossings and radar fixes, camera line of sight, pixels and the sun, the sound delay, the flight limits of a quadcopter and a fixed-wing in wind, a loop with a single waypoint, coverage, layout settings, no sensor hearing a drone that is not there, and the same seed giving byte-identical files without moving any sensor or drone when another is added.
 
 ## Known limits
 
