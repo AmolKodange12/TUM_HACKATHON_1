@@ -54,7 +54,13 @@ Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), clic
 
 ## Simple view: Sky Spotters (`cute/`)
 
-A small game on the same engine. Place your stations (birdwatcher huts) on the map, release the birds, and catch as many as you can before the round ends. A bird is caught the first second two stations cross their bearings on it (a fix). Birds (a hummingbird for the quadcopter, a stork for the recon drone, a swift for the delta wing, a pigeon for the decoy) fly in from the edges at random times, cross and leave. Each station shows how many birds it has seen, how confident it is, and its signal over time. A round is `POST /api/game`; the same stations, bird count and seed always give the same round.
+A small game on the same engine. The goal is **network confidence**: each station should hear every bird in the air, loud and clear.
+
+- **Place** up to 5 station huts and spend a **60 m mast budget** on them, 5–30 m each. Tap a hut for its mast; a taller mast clears more terrain, so you choose between tall masts in the valleys and short ones on the ridges, few huts or many.
+- **Release the birds:** they fly in from the edges at random times, cross and leave (`POST /api/game`). A hummingbird stands for the quadcopter, a stork for the recon drone, a swift for the delta wing, a pigeon for the decoy; the legend on the right counts them and highlights them on hover.
+- **Score:** per station and second with a bird in the air, the mean over those birds of (SNR − threshold) / 20 dB, clamped to 0–1, where a bird the station cannot hear counts 0; averaged over the round, then over the stations. Stars at 90 %, 110 % and 130 % of **par**: the starting layout's score against the same birds, so every area and round is fair.
+- **Try again, same birds** to improve the placement; **New birds** for a new round. A first fix of a bird pops "Located!".
+- Soft procedural music and a wing hum while birds fly; the speaker button mutes it (remembered).
 
 ## Files
 

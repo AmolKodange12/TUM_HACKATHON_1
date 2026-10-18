@@ -53,13 +53,18 @@
   .switch span { background: var(--coral); color: #fff; box-shadow: 0 3px 0 var(--coral-d); }
   .switch a:hover { color: var(--ink); background: #f1edff; transform: scale(1.05); }
 
-  /* the score: big, central, one dot per bird */
-  #score { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); padding: 8px 20px 10px; text-align: center; }
-  #score .n { font-size: 30px; font-weight: 700; line-height: 1.05; } #score .n b { color: var(--mint-d); }
+  /* the score: network confidence, big and central, with par and the three star marks */
+  #score { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); padding: 8px 20px 10px; text-align: center; width: 300px; }
+  #score .k { color: var(--soft); font-size: 12px; letter-spacing: .3px; }
+  #score .n { font-size: 34px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
   #score .n.bump { animation: bump .5s var(--spring); }
-  #score .dots { display: flex; gap: 6px; justify-content: center; margin-top: 5px; }
-  #score .dots i { width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--c); background: #fff; transition: background .3s, transform .4s var(--spring); }
-  #score .dots i.on { background: var(--c); transform: scale(1.15); }
+  #sbar { position: relative; height: 12px; border-radius: 8px; background: #efeaff; margin: 8px 6px 4px; box-shadow: inset 0 2px 0 rgba(59, 47, 92, .08); }
+  #sbar > i { position: absolute; inset: 0; border-radius: 8px; background: linear-gradient(90deg, #ffc23c, #3ddc97); transform-origin: 0 50%; transform: scaleX(0); will-change: transform; }
+  #sbar .mk { position: absolute; top: -13px; width: 22px; height: 22px; margin-left: -11px; transition: transform .45s var(--spring); }
+  #sbar .mk.got { transform: scale(1.25) rotate(-8deg); }
+  #sbar .par { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--ink); opacity: .55; }
+  #score .sub { display: flex; justify-content: space-between; color: var(--soft); font-size: 12px; margin: 4px 4px 0; }
+  #score .sub b { color: var(--ink); }
 
   /* station boards: slim column of mini cards */
   #stations { position: fixed; left: 16px; top: 92px; width: 236px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100% - 210px); overflow-y: auto; scrollbar-width: none; padding: 2px 2px 8px; }
@@ -68,6 +73,7 @@
   .st-h { display: flex; align-items: center; gap: 8px; }
   .st-h .ic { width: 26px; height: 26px; border-radius: 9px; background: var(--hc); display: grid; place-items: center; font-weight: 700; font-size: 14px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .1); }
   .st-h .seen { margin-left: auto; color: var(--soft); font-size: 12px; } .st-h .seen b { color: var(--ink); font-size: 18px; margin-right: 2px; }
+  .st-h .mast { color: var(--soft); font-size: 11.5px; background: #f1edff; padding: 1px 6px; border-radius: 8px; }
   .st-h .seen b.bump { display: inline-block; animation: bump .45s var(--spring); }
   .meter { height: 8px; border-radius: 6px; background: #efeaff; margin: 8px 0 3px; overflow: hidden; }
   .meter i { display: block; height: 100%; width: 100%; border-radius: 6px; background: linear-gradient(90deg, #ffc23c, #3ddc97); transform-origin: 0 50%; transform: scaleX(0); will-change: transform; }
@@ -102,6 +108,20 @@
   .stepper button { width: 26px; height: 26px; border: 0; border-radius: 9px; background: #fff; color: var(--ink); font-weight: 700; cursor: pointer; box-shadow: 0 2px 0 var(--ledge); transition: transform .25s var(--spring); }
   .stepper button:active { transform: scale(.88); } .stepper span { min-width: 64px; text-align: center; font-weight: 600; font-size: 13px; }
   #release.busy { pointer-events: none; } #release.busy .lbl::after { content: '…'; }
+  .budget { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--soft); }
+  .budget .bb { flex: 1; max-width: 170px; height: 10px; border-radius: 6px; background: #efeaff; overflow: hidden; }
+  .budget .bb i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #a98bff, #4fb8ff); transform-origin: 0 50%; transition: transform .35s var(--spring); }
+  .budget b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  /* the mast picker that pops up over a tapped hut */
+  #mastpopO { position: fixed; left: 0; top: 0; z-index: 2; will-change: transform; }
+  #mastpop { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 16px; background: #fff;
+    box-shadow: 0 5px 0 var(--ledge), 0 10px 24px rgba(59, 47, 92, .18); transform: translate(-50%, -100%) scale(.5); opacity: 0; pointer-events: none;
+    transition: opacity .15s, transform .35s var(--spring); will-change: transform; }
+  #mastpop.on { opacity: 1; pointer-events: auto; transform: translate(-50%, -100%) scale(1); }
+  #mastpop button { width: 30px; height: 30px; border: 0; border-radius: 10px; background: #f1edff; color: var(--ink); font-weight: 700; font-size: 16px; cursor: pointer; transition: transform .25s var(--spring); }
+  #mastpop button:hover { transform: scale(1.12); } #mastpop button:active { transform: scale(.88); } #mastpop button:disabled { opacity: .35; }
+  #mastpop .v { min-width: 66px; text-align: center; font-weight: 700; } #mastpop .v small { display: block; color: var(--soft); font-weight: 500; font-size: 11px; margin-top: -2px; }
+  #mastpop .del { background: #ffe1e6; color: var(--coral-d); }
 
   /* overlays: area picker, end card */
   .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(59, 47, 92, .18); backdrop-filter: blur(3px); z-index: 3; opacity: 0; pointer-events: none; transition: opacity .35s var(--out); }
@@ -114,10 +134,31 @@
     transition: transform .3s var(--spring); }
   .area:hover { transform: translateY(-3px) scale(1.04) rotate(-1deg); } .area:active { transform: scale(.96); }
   .area b { display: block; font-size: 17px; } .area small { color: var(--soft); }
-  .area .e { font-size: 26px; display: block; margin-bottom: 4px; }
-  #stars { font-size: 44px; letter-spacing: 6px; margin: 4px 0 2px; } #stars i { font-style: normal; display: inline-block; animation: star .6s var(--spring) both; }
-  #stars i.off { filter: grayscale(1) opacity(.3); }
-  #best { color: var(--soft); margin-bottom: 18px; } .end-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .area .e { display: block; width: 74px; height: 56px; margin-bottom: 4px; transition: transform .45s var(--spring); }
+  .area:hover .e { transform: rotate(-4deg) scale(1.08); } .area .e svg { width: 100%; height: 100%; overflow: visible; }
+  #title .chip { display: inline-block; width: 22px; height: 17px; vertical-align: -4px; margin-right: 4px; } #title .chip svg { width: 100%; height: 100%; }
+  /* hand-made stars: they draw themselves in, then the crayon fill lands with a pop */
+  #stars { display: flex; justify-content: center; gap: 4px; margin: 2px 0 4px; }
+  #stars .sk { width: 84px; height: 84px; } #stars .sk:nth-child(2) { margin-top: -14px; width: 96px; height: 96px; }
+  .sk { overflow: visible; } .sk .ln { stroke-dasharray: 260; stroke-dashoffset: 260; animation: draw .7s var(--out) forwards; animation-delay: var(--d, 0s); }
+  .sk .fl { opacity: 0; transform-origin: 50% 55%; animation: fillpop .55s var(--spring) forwards; animation-delay: calc(var(--d, 0s) + .55s); }
+  .sk .sp { opacity: 0; animation: sparkle 1.6s ease-out forwards; animation-delay: calc(var(--d, 0s) + .8s); }
+  #sbar .sk .ln, #sbar .sk .fl, #sbar .sk .sp { animation: none; stroke-dashoffset: 0; opacity: 1; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes fillpop { from { opacity: 0; transform: scale(.3) rotate(-25deg); } to { opacity: 1; transform: none; } }
+  @keyframes sparkle { 0% { opacity: 0; transform: scale(.4); } 30% { opacity: 1; transform: scale(1.1); } 100% { opacity: .85; transform: none; } }
+  #endScore { font-size: 15px; color: var(--soft); margin: 2px 0 2px; } #endScore b { color: var(--ink); font-size: 20px; }
+  #endScore .up { color: var(--mint-d); font-weight: 700; } #endScore .down { color: var(--coral-d); font-weight: 700; }
+  #best { color: var(--soft); margin-bottom: 18px; } .end-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .end-btns .huge { font-size: 18px; padding: 13px 20px; }
+  /* bird legend on the right */
+  #legend { position: fixed; right: 16px; top: 92px; width: 228px; padding: 10px 10px 8px; }
+  #legend h3 { margin: 0 4px 6px; font-size: 13px; color: var(--soft); font-weight: 600; letter-spacing: .3px; }
+  .lg { display: flex; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 14px; cursor: default; transition: background .2s, transform .3s var(--spring), opacity .2s; }
+  .lg:hover, .lg.hl { background: #f6f3ff; transform: translateX(-3px) scale(1.02); }
+  .lg.none { opacity: .38; } .lg .ic { width: 36px; height: 36px; flex: none; } .lg .ic svg { width: 100%; height: 100%; }
+  .lg b { display: block; font-size: 14px; line-height: 1.1; } .lg small { color: var(--soft); font-size: 11.5px; display: block; line-height: 1.2; }
+  .lg .ct { margin-left: auto; text-align: right; font-size: 11.5px; color: var(--soft); white-space: nowrap; line-height: 1.25; } .lg .ct b { display: inline; font-size: 13px; color: var(--ink); }
 
   /* world-anchored bits: outer moves (transform only), inner animates */
   #labels > div { position: absolute; left: 0; top: 0; will-change: transform; pointer-events: none; }
@@ -143,7 +184,8 @@
   .dots3 span:nth-child(2) { background: var(--sun); animation-delay: .12s; } .dots3 span:nth-child(3) { background: var(--mint); animation-delay: .24s; }
 
   /* which bits show in which phase */
-  body:not([data-mode="place"]):not([data-mode="loading"]) #place, body:not([data-mode="round"]):not([data-mode="end"]) :is(#bar, #score, #stations) { display: none; }
+  body:not([data-mode="place"]):not([data-mode="loading"]) #place, body:not([data-mode="round"]):not([data-mode="end"]) :is(#bar, #score, #stations, #legend) { display: none; }
+  body:not([data-mode="place"]) #mastpopO { display: none; }
   .enter { animation: enter .6s var(--spring) both; }
   @keyframes enter { from { opacity: 0; transform: translateY(24px) scale(.92); } }
   #bar.enter, #place.enter { animation-name: enterbar; } @keyframes enterbar { from { opacity: 0; transform: translate(-50%, 40px) scale(.9); } }
@@ -157,7 +199,8 @@
     #title { top: 10px; left: 10px; padding: 5px 10px 5px 5px; } #title .logo { width: 36px; height: 36px; } #title .logo svg { width: 28px; height: 28px; }
     #title h1 { font-size: 17px; } #title p { display: none; }
     #top { top: 10px; right: 10px; gap: 6px; } #top .lbl { display: none; } #top .btn { padding: 9px; } .switch a, .switch span { padding: 6px 9px; font-size: 13px; }
-    #score { top: 64px; padding: 6px 14px 8px; } #score .n { font-size: 22px; }
+    #score { top: 64px; padding: 6px 14px 8px; width: 240px; } #score .n { font-size: 24px; } #legend { display: none !important; }
+    #stars .sk { width: 64px; height: 64px; } #stars .sk:nth-child(2) { width: 74px; height: 74px; }
     #stations { top: auto; bottom: 150px; left: 10px; right: 10px; width: auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; max-height: none; }
     .st { flex: none; width: 188px; }
     #bar { bottom: 10px; width: calc(100% - 20px); gap: 10px; padding: 10px; flex-wrap: wrap; }
@@ -178,10 +221,15 @@
     <button id="sound" class="btn lilac" aria-pressed="false" title="Sounds (off)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path id="snd-x" d="M17 9l4 6M21 9l-4 6"/><path id="snd-w" d="M17 8a5 5 0 0 1 0 8" style="display:none"/></svg></button>
     <nav class="switch" aria-label="View"><span aria-current="page">Simple</span><a id="toPro" href="../viewer/">Pro</a></nav>
   </div>
-  <div id="score" class="card enter"><div class="n" id="scoreN">Caught <b>0</b> / 0</div><div class="dots" id="scoreDots"></div></div>
+  <div id="score" class="card enter" title="Network confidence: for each station, how clearly it hears every bird in the air (a bird it cannot hear counts as 0), averaged over the round and over your stations. Beat the par: the same birds heard by the starting layout.">
+    <div class="k">network confidence</div><div class="n" id="scoreN">–</div>
+    <div id="sbar"><i></i><span class="par" id="parMk"></span></div>
+    <div class="sub"><span id="parTxt">par –</span><span id="locTxt">located <b>0</b> / 0</span></div></div>
+  <div id="legend" class="card enter" style="animation-delay:.1s"><h3>Birds in this round</h3><div id="legendRows"></div></div>
   <div id="stations"></div>
   <div id="place" class="card enter">
-    <div class="txt"><b id="placeTitle">Place your huts</b><p>Tap the map to drop a hut · drag to move · tap to remove</p>
+    <div class="txt"><b id="placeTitle">Place your huts</b><p>Goal: every station hears every bird, loud and clear. Tap the map to drop a hut · drag to move · tap a hut for its mast</p>
+      <div class="budget" title="Mast budget: taller masts hear farther, but you only have so much mast to spend."><span>mast</span><span class="bb"><i id="budgetBar"></i></span><span><b id="budgetTxt">0</b> / 60 m</span></div>
       <button id="where" class="btn ghost" style="padding:5px 10px;font-size:13px;border-radius:10px;margin:6px 6px 0 0">Change place</button><div class="stepper" title="How many birds fly this round"><button id="bminus" aria-label="Fewer birds">−</button><span id="bcount">6 birds</span><button id="bplus" aria-label="More birds">+</button></div></div>
     <button id="release" class="btn coral huge"><span class="lbl">Release the birds!</span></button>
   </div>
@@ -197,8 +245,9 @@
   </div>
 </div>
 <div id="picker" class="overlay"><div class="card"><h2>Where do we watch?</h2><p>Pick a place. Real terrain, cute birds.</p><div id="areas"></div></div></div>
-<div id="endcard" class="overlay"><div class="card"><div id="stars"></div><h2 id="endTitle"></h2><div id="best"></div>
-  <div class="end-btns"><button id="again" class="btn coral huge">Play again</button><button id="move" class="btn sky huge">Move stations</button></div></div></div>
+<div id="mastpopO"><div id="mastpop" role="dialog" aria-label="Mast height"><button id="mDown" aria-label="Lower mast">−</button><div class="v"><span id="mVal">15 m</span><small>mast</small></div><button id="mUp" aria-label="Raise mast">+</button><button id="mDel" class="del" aria-label="Remove hut" title="Remove hut">✕</button></div></div>
+<div id="endcard" class="overlay"><div class="card"><div id="stars"></div><h2 id="endTitle"></h2><div id="endScore"></div><div id="best"></div>
+  <div class="end-btns"><button id="again" class="btn coral huge" title="The same birds again: move your stations and beat your score">Try again, same birds</button><button id="fresh" class="btn mint huge">New birds</button><button id="move" class="btn sky huge">Move stations</button></div></div></div>
 <div id="toast"></div>
 
 <script type="importmap">
@@ -219,7 +268,9 @@ const $ = s => document.querySelector(s);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const VEX = 5;           // vertical exaggeration: lumpier, cuter hills (birds use the same mapping, so heights stay true)
 const BIRD_PX = 64;      // birds are drawn this many pixels long at any zoom
-const MAX_HUTS = 6, ROUND_SPEED = 10;   // a 600 s round plays in ~60 s
+const MAX_HUTS = 5, ROUND_SPEED = 10;   // a 600 s round plays in ~60 s
+const BUDGET = 60, MAST_MIN = 5, MAST_MAX = 30, MAST_STEP = 5, MAST_START = 15;   // metres of mast to spend; taller hears farther
+const STAR_AT = [0.9, 1.1, 1.3];   // stars at these multiples of par (the starting layout against the same birds)
 const ID = ['#ff6b81', '#4fb8ff', '#ffc23c', '#3ddc97', '#a98bff', '#ff9f43', '#22d3ee', '#f472b6'];
 const HUTC = ['#c8f4dd', '#ffe1ec', '#e3dcff', '#d8efff', '#fff1c7', '#ffe0cc'];
 const damp = (rate, dt) => 1 - Math.exp(-rate * dt);   // frame-rate independent easing factor
@@ -249,7 +300,40 @@ const SPECIES = {
     span: 1.95, chord: .48, freq: 4.4, glide: .14, flap: .7, neck: '#5fd4c4', size: .95 },
 };
 const SPECIES_OF = { quadcopter: 'hummingbird', fixed_wing_recon: 'stork', delta_wing: 'swift', decoy: 'pigeon' };
-const AREA_LOOK = { kaniv: ['🌊', '#d8efff'], yaremche: ['⛰️', '#e3dcff'], devin: ['🌲', '#c8f4dd'], flevoland: ['🌷', '#ffe1ec'] };
+const STANDS_FOR = { hummingbird: 'camera quadcopter', stork: 'fixed-wing recon drone', swift: 'delta-wing attack drone', pigeon: 'decoy' };
+
+// one wobbly ink filter for everything hand-drawn (stars, area icons)
+document.body.insertAdjacentHTML('beforeend', `<svg width="0" height="0" style="position:absolute"><defs>
+  <filter id="wob" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter>
+  <filter id="crayon" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="1" seed="8" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.25" result="a"/><feComposite in="SourceGraphic" in2="a" operator="in"/></filter>
+  <radialGradient id="starfill" cx="42%" cy="38%" r="70%"><stop offset="0" stop-color="#fff3a8"/><stop offset=".55" stop-color="#ffc23c"/><stop offset="1" stop-color="#ff9a3c"/></radialGradient>
+</defs></svg>`);
+// a hand-drawn star: jittered points, two sketchy strokes, crayon fill, doodle sparkles; a little different every time
+function sketchStar(on, seedN, delay = 0) {
+  const r = mulberry(seedN * 7919 + 13), pt = (k, j) => { const a = -Math.PI / 2 + k * Math.PI / 5, rad = (k % 2 ? 19 : 44) * (1 + (r() - .5) * j); return [50 + Math.cos(a) * rad, 54 + Math.sin(a) * rad]; };
+  const path = j => 'M' + Array.from({ length: 10 }, (_, k) => pt(k, j)).map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L') + 'Z';
+  const a = path(.12), b = path(.18), tilt = ((r() - .5) * 14).toFixed(1);
+  const spark = on ? [[14, 18], [86, 22], [88, 78]].map(([x, y], k) => `<g class="sp" style="animation-delay:calc(var(--d) + ${.8 + k * .12}s)" transform="translate(${x} ${y})"><path d="M0 -6V6M-6 0H6" stroke="#ffb02e" stroke-width="2.6" stroke-linecap="round"/></g>`).join('') : '';
+  return `<svg class="sk" viewBox="0 0 100 100" style="--d:${delay}s"><g transform="rotate(${tilt} 50 54)" filter="url(#wob)">
+    ${on ? `<path class="fl" d="${a}" fill="url(#starfill)" filter="url(#crayon)"/><path class="fl" d="${a}" fill="none" stroke="#fff6c9" stroke-width="5" stroke-linejoin="round" opacity=".7" transform="translate(-2 -2) scale(.96)" style="transform-box:fill-box"/>` : ''}
+    <path class="ln" d="${a}" fill="none" stroke="${on ? '#3b2f5c' : '#c9c1e3'}" stroke-width="${on ? 3.4 : 3}" stroke-linejoin="round" stroke-linecap="round" ${on ? '' : 'stroke-dasharray="6 7"'}/>
+    ${on ? `<path class="ln" d="${b}" fill="none" stroke="#3b2f5c" stroke-width="1.6" stroke-linejoin="round" opacity=".55" style="animation-delay:calc(var(--d) + .15s)"/>` : ''}
+  </g>${spark}</svg>`;
+}
+// stylised scenery icons, drawn like the stars
+const ink = 'stroke="#3b2f5c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"';
+const AREA_ICON = {
+  kaniv: `<svg viewBox="0 0 80 60"><g filter="url(#wob)"><path d="M2 34 C14 18 26 14 40 22 S64 16 78 28 V60 H2Z" fill="#9edb8a" ${ink}/><path d="M2 46 C20 40 30 52 46 44 S68 40 78 46 V60 H2Z" fill="#7cc6ff" ${ink}/>
+    <path d="M10 50 q6 -3 12 0 M40 51 q6 -3 12 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="62" cy="11" r="7" fill="#ffd166" ${ink}/></g></svg>`,
+  yaremche: `<svg viewBox="0 0 80 60"><g filter="url(#wob)"><path d="M2 58 L22 16 L34 34 L46 8 L78 58Z" fill="#b9a8ff" ${ink}/><path d="M40 20 L46 8 L52 20 L48 18 L45 22Z" fill="#fff" ${ink}/>
+    <path d="M58 58 L58 40" ${ink}/><path d="M58 30 L52 44 L64 44Z M58 36 L50 50 L66 50Z" fill="#3ddc97" ${ink}/><path d="M30 34 C31 44 29 50 31 58" fill="none" stroke="#7cc6ff" stroke-width="4" stroke-linecap="round"/></g></svg>`,
+  devin: `<svg viewBox="0 0 80 60"><g filter="url(#wob)"><path d="M2 40 C14 26 26 28 36 34 C46 22 62 22 78 36 V60 H2Z" fill="#8fd6a8" ${ink}/><ellipse cx="40" cy="50" rx="16" ry="5" fill="#7cc6ff" ${ink}/>
+    <path d="M32 42 c-4 -6 4 -8 0 -14 M40 40 c-4 -6 4 -8 0 -14 M48 42 c-4 -6 4 -8 0 -14" fill="none" stroke="#c9c1e3" stroke-width="2.4" stroke-linecap="round"/></g></svg>`,
+  flevoland: `<svg viewBox="0 0 80 60"><g filter="url(#wob)"><path d="M2 36 H78 V60 H2Z" fill="#c8f08f" ${ink}/><path d="M2 46 H78 M26 36 V60 M54 36 V60" ${ink}/><path d="M2 41 H78" stroke="#7cc6ff" stroke-width="4"/>
+    <path d="M60 36 L62 18 L66 18 L68 36Z" fill="#fff" ${ink}/><g transform="translate(64 17)"><path d="M0 0 L-12 -10 M0 0 L12 -10 M0 0 L10 12 M0 0 L-10 12" ${ink}/></g><path d="M12 30 l3 -6 l3 6 M20 30 l3 -6 l3 6" fill="none" stroke="#ff8fa3" stroke-width="2.4" stroke-linecap="round"/></g></svg>`,
+};
+const AREA_BG = { kaniv: '#d8efff', yaremche: '#e3dcff', devin: '#c8f4dd', flevoland: '#ffe1ec' };
 
 // ---------- renderer, camera, light ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -500,7 +584,8 @@ function makeBird(sp, color) {
 // ---------- stations (huts) ----------
 let stations = [];
 function makeHut(k) {
-  const g = new THREE.Group(), ol = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide }), wood = toon('#c98b5a'), wood2 = toon('#e5ad73');
+  const g0 = new THREE.Group(), g = new THREE.Group(), ol = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide }), wood = toon('#c98b5a'), wood2 = toon('#e5ad73');
+  g0.add(g);   // g0 stands on the ground; g (the hut itself) rides up its mast
   const add = (parent, geo, mat, p, sc, r, outline = true) => {
     const m = new THREE.Mesh(geo, mat); m.position.set(...p); m.scale.set(...sc); if (r) m.rotation.set(...r); m.castShadow = true;
     if (outline) { const o = new THREE.Mesh(geo, ol); o.scale.setScalar(1.08); m.add(o); }
@@ -518,10 +603,50 @@ function makeHut(k) {
   add(bino, SPH, new THREE.MeshBasicMaterial({ color: '#9fe3ff' }), [0, 0, -.19], [.045, .02, .01], null, false);
   const hit = new THREE.Mesh(new THREE.BoxGeometry(.5, .75, .5), new THREE.MeshBasicMaterial({ visible: false }));
   hit.position.y = .32; g.add(hit);
-  return { g, bino, flag, hit };
+  const pole = new THREE.Mesh(CYL, toon('#8a6a4f')); pole.castShadow = true; g0.add(pole);   // the mast, scaled per hut
+  const brace = new THREE.Mesh(CYL, toon('#a7805e')); brace.rotation.z = .5; g0.add(brace);
+  return { g: g0, top: g, pole, brace, bino, flag, hit };
 }
-function addStation(lat, lon) {
+const mastLift = m => (m - MAST_MIN) / (MAST_MAX - MAST_MIN) * .55;   // hut-local height of the mast top
+function setMast(st, m) {
+  st.mast = clamp(Math.round(m / MAST_STEP) * MAST_STEP, MAST_MIN, MAST_MAX);
+  const h = mastLift(st.mast);
+  st.top.position.y = h;
+  st.pole.visible = st.brace.visible = h > .01;
+  st.pole.scale.set(.018, Math.max(h, .001), .018); st.pole.position.y = h / 2;
+  st.brace.scale.set(.008, Math.max(h * .7, .001), .008); st.brace.position.set(.06, h * .35, 0);
+}
+const budgetUsed = (except = null) => stations.reduce((a, s) => a + (s === except ? 0 : s.mast), 0);
+let picked = null;   // the hut whose mast picker is open
+const mastPopO = $('#mastpopO');
+function pick(st) {
+  picked = st;
+  $('#mastpop').classList.toggle('on', !!st);
+  stations.forEach(x => x.lift = x === st ? .8 : 0);
+  if (st) updateMastPop();
+}
+function updateMastPop() {
+  if (!picked) return;
+  $('#mVal').textContent = `${picked.mast} m`;
+  $('#mDown').disabled = picked.mast <= MAST_MIN;
+  $('#mUp').disabled = picked.mast >= MAST_MAX || budgetUsed() + MAST_STEP > BUDGET;
+}
+function removeStation(st) {
+  stations.splice(stations.indexOf(st), 1); scene.remove(st.g); disposeKeep(st.g); st.signO.remove();
+  burst(st.g.position, ['#c98b5a', '#ffffff'], 10, .07 * D / 14, .8); renumber(); sfx.plop();
+}
+const changeMast = d => {
+  if (!picked || (d > 0 && budgetUsed() + MAST_STEP > BUDGET)) return;
+  setMast(picked, picked.mast + d * MAST_STEP); picked.pop = .8;
+  burst(picked.g.position.clone().add(new THREE.Vector3(0, mastLift(picked.mast) * picked.g.scale.y, 0)), ['#ffffff', '#a98bff'], 6, .05 * D / 14, .5);
+  d > 0 ? sfx.pop() : sfx.tick(); updatePlace(); updateMastPop(); syncURL();
+};
+$('#mUp').onclick = () => changeMast(1);
+$('#mDown').onclick = () => changeMast(-1);
+$('#mDel').onclick = () => { const st = picked; pick(null); removeStation(st); updatePlace(); syncURL(); };
+function addStation(lat, lon, mast = MAST_START) {
   const k = stations.length, m = makeHut(k), st = { lat, lon, ...m, pop: REDUCED ? 1 : 0, v: 0, beams: {}, lift: 0 };
+  setMast(st, mast);
   st.hit.userData.station = st;
   scene.add(st.g); stations.push(st);
   [st.signO, st.sign] = el('sign', `${k + 1}`, `--hc:${HUTC[k % HUTC.length]}`);
@@ -536,8 +661,8 @@ function placeStation(st) {
 function clearStations() { for (const st of stations) { scene.remove(st.g); disposeKeep(st.g); st.signO.remove(); } stations = []; }
 const disposeKeep = o => o.traverse(c => { if (c.geometry && !SHARED.has(c.geometry)) c.geometry.dispose(); (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m?.dispose?.()); });
 function renumber() {
-  const keep = stations.map(s => [s.lat, s.lon]);
-  clearStations(); keep.forEach(([la, lo]) => { const s = addStation(la, lo); s.pop = 1; });
+  const keep = stations.map(s => [s.lat, s.lon, s.mast]);
+  clearStations(); keep.forEach(([la, lo, m]) => { const s = addStation(la, lo, m); s.pop = 1; });
 }
 function defaultHuts() {
   const [w, s, e, n] = AREA.bbox, pts = [];
@@ -547,7 +672,7 @@ function defaultHuts() {
       const [x, y] = xyOf(lat, lon); if (groundH(x, y) > wl + zr * .02) break;
       lat += ((s + n) / 2 - lat) * .2; lon += ((w + e) / 2 - lon) * .2;
     }
-    pts.push([lat, lon]);
+    pts.push([lat, lon, MAST_START]);
   }
   return pts;
 }
@@ -556,14 +681,79 @@ function defaultHuts() {
 const labels = $('#labels');
 const el = (cls, html, style = '') => { const o = document.createElement('div'), i = document.createElement('div'); i.className = cls; i.innerHTML = html; if (style) i.style.cssText = style; o.append(i); labels.append(o); return [o, i]; };
 
-// ---------- sounds: tiny synth blips, off until the player turns them on ----------
-let ac = null, soundOn = false, lastSfx = 0;
+// ---------- sound: soft procedural music, a hum from the birds in the air, little blips ----------
+// All synthesised (no files). It starts on the first gesture (browsers block audio before) unless muted;
+// the mute choice is remembered.
+let ac = null, master = null, fx = null, music = null, soundOn = true, lastSfx = 0;
+const HUM = {};
+try { soundOn = localStorage.getItem('skyspotters:sound') !== 'off'; } catch { /* no storage: sound on */ }
+const midi = n => 440 * 2 ** ((n - 69) / 12);
+function audio() {
+  if (ac) return ac;
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  master = ac.createGain(); master.gain.value = soundOn ? 1 : 0; master.connect(ac.destination);
+  const len = Math.floor(ac.sampleRate * 2.6), ir = ac.createBuffer(2, len, ac.sampleRate);   // reverb: a decaying noise burst
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let k = 0; k < len; k++) d[k] = (Math.random() * 2 - 1) * (1 - k / len) ** 2.6; }
+  const verb = ac.createConvolver(); verb.buffer = ir;
+  fx = ac.createGain(); fx.gain.value = .5; fx.connect(verb).connect(master);
+  startMusic(); startHum(); musicLevel();
+  return ac;
+}
+function startMusic() {   // a calm pad, Fmaj7 Dm7 Bbmaj7 C6, 8 s each, with sparse plucked notes on top
+  const CHORDS = [[53, 57, 60, 64], [50, 53, 57, 60], [46, 50, 53, 57], [48, 52, 55, 60]];
+  const bus = ac.createGain(), lp = ac.createBiquadFilter();
+  bus.gain.value = 0; lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = .4;
+  bus.connect(lp); lp.connect(master); lp.connect(fx);
+  music = { bus, k: 0 };
+  const chord = () => {
+    const t0 = ac.currentTime, notes = CHORDS[music.k++ % CHORDS.length];
+    for (const n of notes) for (const [type, det, vol] of [['sine', 0, .045], ['triangle', 6, .014]]) {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.value = midi(n); o.detune.value = det;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + 2.6); g.gain.setValueAtTime(vol, t0 + 6.2); g.gain.linearRampToValueAtTime(0, t0 + 9.8);
+      o.connect(g).connect(bus); o.start(t0); o.stop(t0 + 10);
+    }
+    lp.frequency.setTargetAtTime(650 + Math.random() * 600, t0, 3);
+  };
+  const pluck = () => {
+    const pent = [65, 67, 69, 72, 74, 77, 79, 81], t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'triangle'; o.frequency.value = midi(pent[Math.floor(Math.random() * pent.length)]);
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.03, t0 + .01); g.gain.exponentialRampToValueAtTime(.0005, t0 + 1.6);
+    o.connect(g); g.connect(bus); g.connect(fx); o.start(t0); o.stop(t0 + 1.7);
+    music.pluckT = setTimeout(pluck, 1800 + Math.random() * 3800);
+  };
+  chord(); music.chordT = setInterval(chord, 8000); music.pluckT = setTimeout(pluck, 2500);
+}
+function musicLevel() {   // a little quieter while birds hum, fuller on the end card
+  if (music) music.bus.gain.setTargetAtTime({ round: .55, end: .9, place: .75 }[mode] ?? .7, ac.currentTime, 1.2);
+}
+function startHum() {   // one voice per species; the frame loop sets how loud each is
+  const noise = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = noise.getChannelData(0);
+  for (let k = 0; k < d.length; k++) d[k] = Math.random() * 2 - 1;
+  const nsrc = () => { const n = ac.createBufferSource(); n.buffer = noise; n.loop = true; n.start(); return n; };
+  const voice = (sp, src, f, qv, amHz) => {
+    const bp = ac.createBiquadFilter(), am = ac.createGain(), lfo = ac.createOscillator(), depth = ac.createGain(), out = ac.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = qv;
+    am.gain.value = .5; lfo.frequency.value = amHz; depth.gain.value = .5; lfo.connect(depth).connect(am.gain); lfo.start();
+    out.gain.value = 0;
+    src.connect(bp).connect(am).connect(out); out.connect(master); out.connect(fx);
+    HUM[sp] = out;
+  };
+  const buzz = ac.createOscillator(); buzz.type = 'sawtooth'; buzz.frequency.value = 175; buzz.start();
+  voice('hummingbird', buzz, 350, 5, 38);   // a soft buzz
+  voice('stork', nsrc(), 480, .7, 1.4);     // slow whooshes
+  voice('swift', nsrc(), 1500, 1.4, 7);     // quick flutters
+  voice('pigeon', nsrc(), 820, 1.1, 4.4);   // clapping flaps
+}
+function setHum(levels) { if (ac) for (const [sp, g] of Object.entries(HUM)) g.gain.setTargetAtTime(levels[sp] ?? 0, ac.currentTime, .2); }
+addEventListener('pointerdown', () => { if (soundOn) audio(); ac?.resume(); }, true);
+addEventListener('keydown', () => { if (soundOn) audio(); ac?.resume(); }, true);
 function tone(f0, f1, dur, type = 'sine', vol = .06, when = 0) {
   if (!soundOn || !ac) return;
   const t0 = ac.currentTime + when, o = ac.createOscillator(), g = ac.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
   g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + .012); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
-  o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + dur + .03);
+  o.connect(g).connect(master); o.start(t0); o.stop(t0 + dur + .03);
 }
 const limited = fn => (...a) => { const now = performance.now(); if (now - lastSfx < 110) return; lastSfx = now; fn(...a); };
 const sfx = {
@@ -574,21 +764,26 @@ const sfx = {
   tick: () => tone(1500, 1300, .025, 'triangle', .02),
   fanfare: () => [523, 659, 784, 1047].forEach((f, k) => tone(f, f * 1.01, .18, 'triangle', .06, k * .12)),
 };
+const showSound = () => {
+  $('#sound').setAttribute('aria-pressed', soundOn); $('#sound').title = `Music and sounds (${soundOn ? 'on' : 'off'})`;
+  $('#snd-x').style.display = soundOn ? 'none' : ''; $('#snd-w').style.display = soundOn ? '' : 'none';
+};
 $('#sound').onclick = () => {
   soundOn = !soundOn;
-  if (soundOn && !ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+  try { localStorage.setItem('skyspotters:sound', soundOn ? 'on' : 'off'); } catch { /* not remembered */ }
+  if (soundOn) audio();
   ac?.resume();
-  $('#sound').setAttribute('aria-pressed', soundOn); $('#sound').title = `Sounds (${soundOn ? 'on' : 'off'})`;
-  $('#snd-x').style.display = soundOn ? 'none' : ''; $('#snd-w').style.display = soundOn ? '' : 'none';
-  sfx.pop();
+  master?.gain.setTargetAtTime(soundOn ? 1 : 0, ac.currentTime, .15);
+  showSound(); sfx.pop();
 };
+showSound();
 
 // ---------- game state and URL ----------
 const q = new URLSearchParams(location.search);
 let mode = 'boot', nBirds = clamp(+q.get('birds') || 6, 1, 12), seed = null, R = null;   // R: the current round's bundle and derived data
 let t = 0, playing = false, speed = ROUND_SPEED, dragging = false, lastI = -1, lastURL = 0;
-const setMode = m => { mode = m; document.body.dataset.mode = m; };
-const hutsParam = () => stations.map(s => `${s.lat.toFixed(5)},${s.lon.toFixed(5)}`).join(';');
+const setMode = m => { mode = m; document.body.dataset.mode = m; if (ac) musicLevel(); };
+const hutsParam = () => stations.map(s => `${s.lat.toFixed(5)},${s.lon.toFixed(5)},${s.mast}`).join(';');
 function syncURL() {
   const p = new URLSearchParams();
   if (AREA) p.set('area', AREA.id);
@@ -613,27 +808,32 @@ async function loadArea(a, huts) {
   AREA = a; T = d.terrain; F = d.frame;
   endRound(); clearStations();
   buildBoard(a.id.length * 97 + 11);
-  (huts?.length ? huts : defaultHuts()).slice(0, MAX_HUTS).forEach(([la, lo]) => addStation(la, lo));
-  $('#sub').textContent = `${a.name} · ${a.region}`;
+  const list = (huts?.length ? huts : defaultHuts()).slice(0, MAX_HUTS);
+  let left = BUDGET;   // masts from a link must still fit the budget
+  list.forEach(([la, lo, m]) => { const mm = clamp(Math.min(m ?? MAST_START, left), MAST_MIN, MAST_MAX); left -= mm; addStation(la, lo, mm); });
+  $('#sub').innerHTML = `<span class="chip">${AREA_ICON[a.id] ?? ''}</span>${a.name} · ${a.region}`;
   camera.position.copy(REDUCED ? home.pos : home.target.clone().add(new THREE.Vector3(.5, .9, .35).normalize().multiplyScalar(D * 3.1)));
   controls.target.copy(home.target);
   flyTo(home.pos.clone(), home.target.clone(), 2.4);
   toPlacement();
 }
 function toPlacement() {
-  endRound(); setMode('place'); updatePlace(); syncURL();
+  endRound(); pick(null); setMode('place'); updatePlace(); syncURL();
   $('#place').classList.remove('enter'); void $('#place').offsetWidth; $('#place').classList.add('enter');
 }
 const updatePlace = () => {
+  const used = budgetUsed();
   $('#placeTitle').textContent = `Place your huts · ${stations.length} / ${MAX_HUTS}`;
-  $('#release').disabled = !stations.length;
+  $('#budgetTxt').textContent = used;
+  $('#budgetBar').style.transform = `scaleX(${clamp(used / BUDGET, 0, 1)})`;
+  $('#release').disabled = !stations.length || used > BUDGET;
 };
 function showPicker() {
   $('#areas').innerHTML = '';
   for (const a of AREAS) {
-    const [e, bg] = AREA_LOOK[a.id] ?? ['🐦', '#fff1c7'], b = document.createElement('button');
-    b.className = 'area'; b.style.setProperty('--bg', bg);
-    b.innerHTML = `<span class="e">${e}</span><b>${a.name}</b><small>${a.region}</small>`;
+    const b = document.createElement('button');
+    b.className = 'area'; b.style.setProperty('--bg', AREA_BG[a.id] ?? '#fff1c7');
+    b.innerHTML = `<span class="e">${AREA_ICON[a.id] ?? birdSVG('#ff8fa3', '#ff6b81', '#ffd0d8', '#ffb347')}</span><b>${a.name}</b><small>${a.region}</small>`;
     b.onclick = async () => { sfx.pop(); $('#picker').classList.remove('on'); if (a.id === AREA?.id) return; try { await loadArea(a); } catch (err) { toast(`Could not load ${a.name}: ${err.message}`); showPicker(); } };
     $('#areas').append(b);
   }
@@ -641,17 +841,58 @@ function showPicker() {
   setTimeout(() => $('#areas .area')?.focus(), 50);
 }
 $('#release').onclick = async () => {
-  if (!stations.length) return;
+  if (!stations.length || budgetUsed() > BUDGET) return;
   sfx.pop();
-  await startRound(Math.floor(Math.random() * 1e6), 0, true);
+  await startRound(nextSeed ?? Math.floor(Math.random() * 1e6), 0, true);
+  nextSeed = null;
 };
+
+// ---------- the score ----------
+// Network confidence: per station and second with a bird in the air, the mean over those birds of
+// clamp((SNR - threshold) / 20 dB, 0, 1), where a bird the station cannot hear counts 0; averaged over the
+// round so far, then over the stations. Par is the same score for the starting layout against the same birds.
+function confidence(B) {
+  const N = B.t.length, ids = Object.keys(B.truth), win = id => B.spawn?.[id] ?? [0, N - 1];
+  const first = Math.min(...ids.map(id => win(id)[0]));
+  const per = B.sensors.map(s => {
+    const avg = new Float32Array(N);
+    let c = 0, n = 0;
+    for (let i = 0; i < N; i++) {
+      let sum = 0, m = 0;
+      for (const id of ids) {
+        const [a, b] = win(id);
+        if (i < a || i > b) continue;
+        m++;
+        const L = B.links[`${s.id}|${id}`];
+        if (L?.det[i]) sum += clamp((L.snr[i] - s.threshold_db) / 20, 0, 1);
+      }
+      if (m) { c += sum / m; n++; }
+      avg[i] = n ? c / n : 0;
+    }
+    return avg;
+  });
+  const net = Float32Array.from({ length: N }, (_, i) => per.reduce((a, v) => a + v[i], 0) / Math.max(per.length, 1));
+  return { per, net, first };
+}
+const parCache = new Map();
+const parFor = (area, sd, n) => {   // the starting layout's score against these birds
+  const key = `${area}|${sd}|${n}`, huts = defaultHuts();
+  if (!parCache.has(key)) parCache.set(key, getJSON('/api/game', { area, huts, birds: n, seed: sd }).then(P => confidence(P).net.at(-1)));
+  return parCache.get(key);
+};
+const pct = v => `${Math.round(v * 100)}%`;
+let nextSeed = null, lastTry = {};   // "Move stations" keeps the birds; lastTry[seed] = previous score
 
 // ---------- the round ----------
 async function startRound(newSeed, t0, play) {
-  setMode('loading'); $('#release').classList.add('busy');
+  setMode('loading'); $('#release').classList.add('busy'); pick(null);
   try {
-    const B = await getJSON('/api/game', { area: AREA.id, huts: stations.map(s => [s.lat, s.lon]), birds: nBirds, seed: newSeed });
+    const [B, par] = await Promise.all([
+      getJSON('/api/game', { area: AREA.id, huts: stations.map(s => [s.lat, s.lon, s.mast]), birds: nBirds, seed: newSeed }),
+      parFor(AREA.id, newSeed, nBirds)]);
     seed = newSeed; setupRound(B);
+    R.par = Math.max(par, .02);
+    setupScoreBar();
     t = clamp(t0, 0, R.N - 1); lastI = -1; setPlaying(play);
     setMode('round');
     for (const id of ['#bar', '#score']) { $(id).classList.remove('enter'); void $(id).offsetWidth; $(id).classList.add('enter'); }
@@ -667,8 +908,8 @@ function endRound() {
     for (const o of [b.root, b.shadow, b.trail, b.path]) { scene.remove(o); disposeKeep(o); }
     for (const e of [b.tagO, b.sayO, b.checkO, b.pingO]) e.remove();
   }
-  for (const st of stations) { for (const bm of Object.values(st.beams)) { st.g.remove(bm.m); disposeKeep(bm.m); } st.beams = {}; }
-  $('#stations').innerHTML = ''; $('#scoreDots').innerHTML = '';
+  for (const st of stations) { for (const bm of Object.values(st.beams)) { bm.m.removeFromParent(); disposeKeep(bm.m); } st.beams = {}; }
+  $('#stations').innerHTML = ''; $('#legendRows').innerHTML = '';
   R = null; following = null; hovered = null; playing = false; $('#endcard').classList.remove('on');
 }
 const pathMats = [];
@@ -694,12 +935,14 @@ function setupRound(B) {
     lm.resolution.set(innerWidth, innerHeight); pathMats.push(lm);
     b.path = new Line2(lg, lm); b.path.computeLineDistances(); b.path.visible = false; b.path.renderOrder = 2; scene.add(b.path);
     [b.tagO, b.tag] = el('tag', '', `--id:${color}`);
-    [b.sayO, b.say] = el('say', 'Caught! +1');
+    [b.sayO, b.say] = el('say', 'Located!');
     [b.checkO, b.check] = el('check', '✓');
     [b.pingO, b.ping] = el('ping', '?');
+    b.spKey = SPECIES_OF[B.drones?.[id]?.type] ?? 'pigeon';
     R.birds[id] = b;
-    const dot = document.createElement('i'); dot.style.setProperty('--c', color); dot.title = sp.name; $('#scoreDots').append(dot); b.dot = dot;
   });
+  R.conf = confidence(B);
+  buildLegend();
   // per station: first detection of each bird (for "birds seen") and the SNR sparkline, clipped to "so far"
   B.sensors.forEach((s, k) => {
     const st = stations[k];
@@ -717,11 +960,11 @@ function setupRound(B) {
       const fd = L.det.findIndex(v => v); if (fd >= 0) st.first[id] = fd;
       const geo = new THREE.ConeGeometry(.24, 2.4, 24, 1, true).translate(0, -1.2, 0).rotateX(Math.PI / 2);
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: R.birds[id].color, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
-      m.position.set(0, .275, 0); m.visible = false; st.g.add(m);
+      m.position.set(0, .275, 0); m.visible = false; st.top.add(m);
       st.beams[id] = { m, a: 0, L };
     }
-    card.innerHTML = `<div class="st-h"><span class="ic">${k + 1}</span><b>Hut ${k + 1}</b><span class="seen"><b>0</b>seen</span></div>
-      <div class="meter" title="Confidence: how far above its detection threshold the signals are right now (0 dB = 0 %, 20 dB or more = 100 %)"><i></i></div>
+    card.innerHTML = `<div class="st-h"><span class="ic">${k + 1}</span><b>Hut ${k + 1}</b><span class="mast">${st.mast} m</span><span class="seen"><b>0</b>seen</span></div>
+      <div class="meter" title="Confidence so far: how clearly this hut hears every bird in the air (a bird it cannot hear counts as 0; 20 dB above its threshold counts as 100 %)"><i></i></div>
       <div class="st-m"><span>confidence</span><span class="pct">–</span></div>
       <svg viewBox="0 0 ${N} 40" preserveAspectRatio="none" aria-label="Signal strength over time"><defs><clipPath id="clip${k}"><rect x="0" y="0" width="0" height="40"/></clipPath></defs>
         <line x1="0" x2="${N}" y1="${yOf(s.threshold_db)}" y2="${yOf(s.threshold_db)}" stroke="#7a6f99" stroke-dasharray="4 4" stroke-opacity=".7" vector-effect="non-scaling-stroke"/>
@@ -816,7 +1059,7 @@ renderer.domElement.addEventListener('pointermove', e => {
     return;
   }
   if (e.pointerType === 'mouse' && !e.buttons) {
-    if (mode === 'place') { const s = pickStation(e); renderer.domElement.style.cursor = s ? 'grab' : 'copy'; stations.forEach(x => x.lift = x === s ? .6 : 0); }
+    if (mode === 'place') { const s = pickStation(e); renderer.domElement.style.cursor = s ? 'grab' : 'copy'; stations.forEach(x => x.lift = x === s || x === picked ? .7 : 0); }
     else setHover(pickBird(e));
   }
 });
@@ -824,17 +1067,20 @@ addEventListener('pointerup', e => {
   const g = gesture; gesture = null; controls.enabled = true;
   if (!g || e.target !== renderer.domElement && !g.st) return;
   if (g.st) {
-    g.st.lift = 0;
-    if (!g.moved) { const i = stations.indexOf(g.st); stations.splice(i, 1); scene.remove(g.st.g); disposeKeep(g.st.g); g.st.signO.remove(); burst(g.st.g.position, ['#c98b5a', '#ffffff'], 10, .07 * D / 14, .8); renumber(); sfx.plop(); }
+    g.st.lift = g.st === picked ? .8 : 0;
+    if (!g.moved) { pick(g.st === picked ? null : g.st); sfx.pop(); }   // tap a hut: its mast picker
     else sfx.tick();
     updatePlace(); syncURL(); return;
   }
   if (g.moved) return;
   if (mode === 'place') {
+    if (picked) { pick(null); return; }   // tapping away closes the picker
     const p = pickLand(e);
     if (!p) return;
     if (stations.length >= MAX_HUTS) { toast(`${MAX_HUTS} huts is the maximum`); return; }
-    const [la, lo] = llOf(p.x * 1000, -p.z * 1000), st = addStation(la, lo);
+    const free = Math.floor((BUDGET - budgetUsed()) / MAST_STEP) * MAST_STEP;
+    if (free < MAST_MIN) { toast('No mast left in the budget: tap a hut and lower its mast first'); return; }
+    const [la, lo] = llOf(p.x * 1000, -p.z * 1000), st = addStation(la, lo, Math.min(MAST_START, free));
     burst(st.g.position, ['#ffc23c', '#ffffff', HUTC[(stations.length - 1) % HUTC.length]], 14, .07 * D / 14, 1);
     sfx.pop(); updatePlace(); syncURL();
   } else if (mode === 'round' || mode === 'end') { const id = pickBird(e); if (id) { sfx.pop(); follow(id); } }
@@ -849,21 +1095,26 @@ addEventListener('keydown', e => {
 });
 
 // ---------- end of round ----------
-const bestKey = () => `skyspotters:best:${AREA.id}:${nBirds}`;
+const bestKey = () => `skyspotters:bestconf:${AREA.id}`;
 function showEnd() {
   setMode('end'); setPlaying(false);
-  const caught = R.objIds.filter(id => R.caughtAt[id] < R.N).length, n = R.objIds.length, ratio = caught / Math.max(n, 1);
-  let best = caught;
-  try { best = Math.max(caught, +localStorage.getItem(bestKey()) || 0); localStorage.setItem(bestKey(), best); } catch { /* private mode: no best score */ }
-  const stars = ratio >= .9 ? 3 : ratio >= .6 ? 2 : ratio > 0 ? 1 : 0;
-  $('#stars').innerHTML = [0, 1, 2].map(k => `<i class="${k < stars ? '' : 'off'}" style="animation-delay:${.15 + k * .15}s">⭐</i>`).join('');
-  $('#endTitle').textContent = caught === n ? `You caught all ${n} birds!` : caught ? `You caught ${caught} of ${n} birds!` : `No birds caught this time`;
-  $('#best').textContent = caught === n ? 'Perfect watch. Can you do it with fewer huts?' : `Best here with ${n} birds: ${best} / ${n} · birds need 2 huts hearing them at once`;
+  const score = R.conf.net[R.N - 1], par = R.par, stars = STAR_AT.filter(k => score >= k * par).length;
+  const located = R.objIds.filter(id => R.caughtAt[id] < R.N).length, n = R.objIds.length, prev = lastTry[seed];
+  lastTry[seed] = score;
+  let best = score;
+  try { best = Math.max(score, +localStorage.getItem(bestKey()) || 0); localStorage.setItem(bestKey(), best); } catch { /* private mode: no best score */ }
+  $('#stars').innerHTML = [0, 1, 2].map(k => sketchStar(k < stars, seed + k * 31, .2 + k * .45)).join('');
+  $('#endTitle').textContent = ['Below par: the birds slipped by', 'Nice, you matched par!', 'Great placement!', 'Superb watch!'][stars];
+  const delta = prev == null ? '' : ` · last try ${pct(prev)} <span class="${score >= prev ? 'up' : 'down'}">${score >= prev ? '+' : '−'}${Math.abs(Math.round((score - prev) * 100))}</span>`;
+  $('#endScore').innerHTML = `Network confidence <b>${pct(score)}</b> · par ${pct(par)}${delta}`;
+  $('#best').textContent = `Located ${located} of ${n} birds · your best on ${AREA.name}: ${pct(best)}`
+    + (stars < 3 ? ` · ${pct(STAR_AT[stars] * par)} for the next star` : '');
   $('#endcard').classList.add('on'); sfx.fanfare(); syncURL();
   setTimeout(() => $('#again').focus(), 400);
 }
-$('#again').onclick = () => { sfx.pop(); $('#endcard').classList.remove('on'); startRound(Math.floor(Math.random() * 1e6), 0, true); };
-$('#move').onclick = () => { sfx.pop(); $('#endcard').classList.remove('on'); overview(); toPlacement(); };
+$('#again').onclick = () => { sfx.pop(); $('#endcard').classList.remove('on'); startRound(seed, 0, true); };
+$('#fresh').onclick = () => { sfx.pop(); $('#endcard').classList.remove('on'); startRound(Math.floor(Math.random() * 1e6), 0, true); };
+$('#move').onclick = () => { sfx.pop(); nextSeed = seed; $('#endcard').classList.remove('on'); overview(); toPlacement(); toast(`Same birds next round: beat ${pct(lastTry[seed])}`); };
 
 // ---------- per-second game events ----------
 function onSecond(i, live) {
@@ -876,7 +1127,6 @@ function onSecond(i, live) {
       burst(b.root.position, [b.color, '#ffc23c', '#ffffff', '#3ddc97'], 30, b.root.scale.x * .32, b.root.scale.x * 2.4); sfx.chirp();
     }
     b.check.classList.toggle('on', caught);
-    b.dot.classList.toggle('on', caught);
     const heard = B.sensors.filter(s => B.links[`${s.id}|${id}`]?.det[i]).map((s, k) => s.id);
     if (live && !caught && heard.length && !R.fixAt[id].has(B.t[i]) && !(i > 0 && B.sensors.some(s => B.links[`${s.id}|${id}`]?.det[i - 1]))) {
       b.ping.classList.add('on'); b.pingUntil = performance.now() + 1100; sfx.ping();
@@ -890,17 +1140,54 @@ function onSecond(i, live) {
     for (const [id, bm] of Object.entries(st.beams)) {
       const on = !!bm.L.det[i]; bm.on = on; bm.bearing = bm.L.bearing[i];
       if (on) { sum += clamp((bm.L.snr[i] - st.thr) / 20, 0, 1); n++; if (!target || bm.L.snr[i] > target.L.snr[i]) target = bm; }
-      if (live && on && !(i > 0 && bm.L.det[i - 1])) burst(st.g.position.clone().add(new THREE.Vector3(0, .5 * st.g.scale.y, 0)), ['#ffc23c', '#ffffff', R.birds[id].color], 8, .05 * D / 14, .7);
+      if (live && on && !(i > 0 && bm.L.det[i - 1])) burst(st.g.position.clone().add(new THREE.Vector3(0, (.5 + mastLift(st.mast)) * st.g.scale.y, 0)), ['#ffc23c', '#ffffff', R.birds[id].color], 8, .05 * D / 14, .7);
     }
-    st.target = target; st.confGoal = n ? sum / n : 0; st.pct.textContent = n ? `${Math.round(st.confGoal * 100)} %` : '–';
+    const k = stations.indexOf(st);
+    st.target = target; st.confGoal = R.conf.per[k]?.[i] ?? 0; st.pct.textContent = i >= R.conf.first ? `${Math.round(st.confGoal * 100)} %` : '–';
     const seen = Object.values(st.first).filter(fd => fd <= i).length;
     if (seen !== st.seen) { st.seen = seen; st.seenEl.textContent = seen; if (live) { st.seenEl.classList.remove('bump'); void st.seenEl.offsetWidth; st.seenEl.classList.add('bump'); } }
   }
-  const caughtN = R.objIds.filter(id => R.caughtAt[id] <= i).length;
-  if (caughtN !== R.shownCaught) {
-    $('#scoreN').innerHTML = `Caught <b>${caughtN}</b> / ${R.objIds.length}`;
-    if (live && R.shownCaught >= 0) { $('#scoreN').classList.remove('bump'); void $('#scoreN').offsetWidth; $('#scoreN').classList.add('bump'); }
-    R.shownCaught = caughtN;
+  const caughtN = R.objIds.filter(id => R.caughtAt[id] <= i).length, net = R.conf.net[i];
+  $('#scoreN').textContent = i >= R.conf.first ? pct(net) : '–';
+  $('#locTxt').innerHTML = `located <b>${caughtN}</b> / ${R.objIds.length}`;
+  R.netGoal = net;
+  const stars = STAR_AT.filter(k => net >= k * R.par).length;
+  if (stars !== R.shownStars) {
+    document.querySelectorAll('#sbar .mk').forEach((mk, k) => { mk.innerHTML = sketchStar(k < stars, seed + k); mk.classList.toggle('got', k < stars); });
+    if (live && stars > R.shownStars) { $('#scoreN').classList.remove('bump'); void $('#scoreN').offsetWidth; $('#scoreN').classList.add('bump'); sfx.chirp(); }
+    R.shownStars = stars;
+  }
+  updateLegend(i);
+}
+
+// the score bar: 0 .. 1.5 x par, with par and the three star marks on it
+function setupScoreBar() {
+  R.barMax = R.par * 1.5; R.shownStars = -1; R.net = 0;
+  $('#parTxt').textContent = `par ${pct(R.par)}`;
+  $('#parMk').style.left = `${100 / 1.5}%`;
+  document.querySelectorAll('#sbar .mk').forEach(e => e.remove());
+  STAR_AT.forEach((k, n) => $('#sbar').insertAdjacentHTML('beforeend', `<span class="mk" style="left:${(k / 1.5 * 100).toFixed(1)}%" title="${['One', 'Two', 'Three'][n]} star${n ? 's' : ''} at ${pct(k * R.par)}"></span>`));
+}
+
+// ---------- bird legend ----------
+let hoverSp = null;
+const legendIcon = k => { const sp = SPECIES[k], w = c => c === '#ffffff' ? '#eceaff' : c; return birdSVG(w(sp.body), w(sp.head), w(sp.wing) === '#eceaff' ? '#dcd8f7' : w(sp.wing), sp.beak); };
+function buildLegend() {
+  const by = {};
+  for (const id of R.objIds) (by[R.birds[id].spKey] ??= []).push(id);
+  R.bySp = by;
+  $('#legendRows').innerHTML = Object.keys(SPECIES).map(k => `<div class="lg${by[k] ? '' : ' none'}" data-sp="${k}" title="${SPECIES[k].name}: stands for a ${STANDS_FOR[k]}">
+    <span class="ic">${legendIcon(k)}</span><div><b>${SPECIES[k].name}</b><small>${STANDS_FOR[k]}</small></div>
+    <div class="ct"><b>0</b> flying<br><span>0 / ${by[k]?.length ?? 0} located</span></div></div>`).join('');
+  document.querySelectorAll('.lg').forEach(r => { r.onmouseenter = () => { hoverSp = r.dataset.sp; }; r.onmouseleave = () => { hoverSp = null; }; });
+}
+function updateLegend(i) {
+  for (const r of document.querySelectorAll('.lg')) {
+    const ids = R.bySp[r.dataset.sp] ?? [];
+    const flying = ids.filter(id => i >= R.spawn[id][0] && i <= R.spawn[id][1]).length, located = ids.filter(id => R.caughtAt[id] <= i).length;
+    const ct = r.querySelector('.ct'), html = `<b>${flying}</b> flying<br><span>${located} / ${ids.length} located</span>`;
+    if (ct.innerHTML !== html) ct.innerHTML = html;
+    r.classList.toggle('hl', hoverSp === r.dataset.sp);
   }
 }
 
@@ -966,7 +1253,7 @@ function frame(now) {
     b.body.position.y = .05 * s1w * amp;
     b.body.rotation.x = b.sp.blur ? clamp(1 - spd / 6, 0, 1) * .45 : 0;   // hummingbirds sit upright while hovering
     b.tail.rotation.y = .5 + .35 * Math.sin(clock * 11 + b.phase);
-    const hl = hovered === id || following === id;
+    const hl = hovered === id || following === id || hoverSp === b.spKey;
     b.hl += ((hl ? 1 : 0) - b.hl) * damp(10, dt);
     b.fk += ((following === id ? 1 : 0) - b.fk) * damp(4, dt);
     const popK = REDUCED ? b.pop : ease.outBack(clamp(b.pop, 0, 1));
@@ -996,7 +1283,7 @@ function frame(now) {
     // the type shows only on hover
     b.tag.classList.toggle('on', b.hl > .5);
     if (b.hl > .5) {
-      const txt = `${b.sp.name} <small>· ${b.caught ? 'caught ✓' : b.heardBy?.length ? `heard by ${b.heardBy.join(', ')}` : 'hiding'}</small>`;
+      const txt = `${b.sp.name} <small>· ${b.caught ? 'located ✓' : b.heardBy?.length ? `heard by ${b.heardBy.join(', ')}` : 'hiding'}</small>`;
       if (b.tag.innerHTML !== txt) b.tag.innerHTML = txt;
     }
     const ps = BIRD_PX * .5 * (1 + .3 * b.hl) * (1 + 1.3 * b.fk);
@@ -1022,13 +1309,25 @@ function frame(now) {
       st.clip.setAttribute('width', t.toFixed(1)); st.cur.setAttribute('x1', t.toFixed(1)); st.cur.setAttribute('x2', t.toFixed(1));
       st.card.classList.toggle('hl', st.lift > 0);
     }
-    tmp.copy(st.g.position); tmp.y += .62 * st.g.scale.y; place(st.signO, tmp, 2);
+    tmp.copy(st.g.position); tmp.y += (.62 + mastLift(st.mast)) * st.g.scale.y; place(st.signO, tmp, 2);
+    if (st === picked) place(mastPopO, tmp, 30);
   }
   water.position.y = (wl - base) * VEX / 1000 + Math.sin(clock * 1.3) * .004;
   for (const c of clouds) { const u = c.userData; u.a += dt * .012; c.position.set(CX + Math.cos(u.a) * u.r, u.y + Math.sin(clock * .5 + u.a * 3) * .08, CZ + Math.sin(u.a) * u.r * .8); }
   stepParticles(dt);
   renderer.render(scene, camera);
 
+  if (ac && now - (frame.humT ?? 0) > 120) {
+    frame.humT = now;
+    const lv = {};
+    if (R && mode === 'round' && playing) for (const b of Object.values(R.birds)) {
+      if (!b.root.visible) continue;
+      const near = 1 / (1 + (camera.position.distanceTo(b.root.position) / (D * .18)) ** 2);
+      lv[b.spKey] = Math.min((lv[b.spKey] ?? 0) + near * b.pop * .05, .06);
+    }
+    setHum(lv);
+  }
+  if (R?.barMax) { R.net += ((R.netGoal ?? 0) - R.net) * damp(6, dt); $('#sbar > i').style.transform = `scaleX(${clamp(R.net / R.barMax, 0, 1).toFixed(4)})`; }
   if (R) {   // timeline: thumb eases toward the time, fill follows; transforms only
     const r = scrub.getBoundingClientRect(), goalX = (t / Math.max(R.N - 1, 1)) * r.width;
     thumbX = dragging || REDUCED ? goalX : thumbX + (goalX - thumbX) * damp(18, dt);
@@ -1055,7 +1354,7 @@ window.__cute = { camera, controls, follow, setHover, overview, get R() { return
 try {
   AREAS = await getJSON('/api/areas');
   const a = AREAS.find(x => x.id === q.get('area'));
-  const huts = (q.get('huts') ?? '').split(';').map(p => p.split(',').map(Number)).filter(p => p.length === 2 && p.every(Number.isFinite));
+  const huts = (q.get('huts') ?? '').split(';').map(p => p.split(',').map(Number)).filter(p => (p.length === 2 || p.length === 3) && p.every(Number.isFinite));
   if (a) {
     await loadArea(a, huts);
     if (q.has('seed') && q.has('birds') && stations.length) await startRound(+q.get('seed') || 0, +q.get('t') || 0, q.get('play') === '1');
