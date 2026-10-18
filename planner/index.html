@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scenario Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg: #eef0f4; --ink: #151a23; --muted: #6b7280; --faint: #9ca3af; --card: #fff; --line: #e2e5ea; --bad: #b45309; --good: #2f6b4f; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.4 Inter, system-ui, sans-serif; }
+  body { display: flex; }
+  #side { width: 380px; flex: none; height: 100%; overflow-y: auto; padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+  #map { flex: 1; height: 100%; }
+  h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.3px; text-transform: uppercase; }
+  .sub { color: var(--muted); margin: 2px 0 6px; }
+  .sub a { color: var(--ink); font-weight: 600; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .card h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .card h3 span { color: var(--faint); font-weight: 400; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+  label.f { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-size: 12px; min-width: 0; }
+  input, select { font: inherit; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 4px 6px; min-width: 0; width: 100%; }
+  input[type=checkbox] { width: auto; accent-color: var(--ink); margin: 0; }
+  button { font: inherit; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 8px; padding: 5px 10px; cursor: pointer; font-weight: 500; }
+  button:hover { background: #f5f6f8; }
+  button.on, button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  button.primary { padding: 9px 14px; font-weight: 600; font-size: 14px; }
+  button.primary:disabled { opacity: .5; cursor: progress; }
+  button.x { border: 0; color: var(--faint); padding: 2px 6px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .bad { color: var(--bad); }
+  .item { border-top: 1px solid var(--line); padding: 8px 0 6px; }
+  .item:first-of-type { border-top: 0; padding-top: 0; }
+  .item .head { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 6px; }
+  .item .head .x { margin-left: auto; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .cols4 { display: grid; grid-template-columns: 1.3fr 1fr 1fr auto; gap: 6px; align-items: end; }
+  .loop { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; padding-bottom: 6px; }
+  #msg { min-height: 18px; }
+  #banner { position: absolute; z-index: 1000; left: 50%; top: 14px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 7px 12px; border-radius: 8px; font-weight: 500; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+  .rx-icon { position: relative; }
+  .rx-icon b { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; background: var(--ink); transform: rotate(45deg); border: 2px solid #fff; }
+  .rx-icon span, .wp-label { position: absolute; left: 10px; top: -22px; background: rgba(255,255,255,.92); padding: 1px 5px; border-radius: 4px; font: 600 11px Inter, sans-serif; white-space: nowrap; color: var(--ink); }
+  .wp-icon i { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+  .wp-icon.first i { width: 16px; height: 16px; left: -8px; top: -8px; }
+  .leaflet-container { font: inherit; cursor: grab; }
+  .drawing .leaflet-container { cursor: crosshair; }
+  @media (max-width: 760px) { body { flex-direction: column-reverse; } #side { width: 100%; height: 55%; } #map { height: 45%; } }
+</style>
+</head>
+<body>
+<div id="side">
+  <div>
+    <h1>Scenario planner</h1>
+    <div class="sub">Pick the area, place receivers, add drones, run. <a href="../viewer/">Open the replay</a></div>
+  </div>
+
+  <div class="card">
+    <h3>Scenario</h3>
+    <div class="grid">
+      <label class="f">Name <input id="s-name"></label>
+      <label class="f">Region <input id="s-region"></label>
+      <label class="f">Start (UTC) <input id="s-start" type="datetime-local" step="1"></label>
+      <label class="f">Length (min) <input id="s-dur" type="number" min="1" max="120" step="1"></label>
+      <label class="f">Seed <input id="s-seed" type="number" step="1"></label>
+      <label class="f">Shadowing (dB) <input id="s-shadow" type="number" min="0" max="15" step="0.5"></label>
+      <label class="f">Wind from (°) <input id="s-wfrom" type="number" min="0" max="359" step="1"></label>
+      <label class="f">Wind (m/s) <input id="s-wspeed" type="number" min="0" max="30" step="1"></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Area <span id="a-size"></span></h3>
+    <div class="tools"><button id="a-pick">Pick on the map</button><button id="a-view">Use the visible map</button></div>
+    <div class="hint" id="a-hint">Up to 25 km a side, inside one whole degree of latitude and longitude (one terrain tile).</div>
+  </div>
+
+  <div class="card">
+    <h3>Receivers <span id="r-count"></span></h3>
+    <div id="r-list"></div>
+    <div class="tools" style="margin-top:6px"><button id="r-add">Add on the map</button></div>
+  </div>
+
+  <div class="card">
+    <h3>Drones <span id="d-count"></span></h3>
+    <div id="d-list"></div>
+    <div class="tools" style="margin-top:6px">
+      <select id="d-type" style="width:auto"></select>
+      <button id="d-add">Add and draw path</button>
+    </div>
+    <div class="tools" style="margin-top:6px">
+      <input id="d-n" type="number" min="1" max="30" value="5" style="width:64px" aria-label="How many random drones">
+      <select id="d-rtype" style="width:auto"><option value="mixed">mixed types</option></select>
+      <button id="d-random">Add random drones</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tools"><button class="primary" id="run">Run simulation</button><button id="dl">Download JSON</button><button id="reset">Reset to example</button></div>
+    <div class="hint" id="msg"></div>
+  </div>
+</div>
+<div id="map"></div>
+<div id="banner" hidden></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+const $ = s => document.querySelector(s);
+const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+const color = i => PALETTE[i] ?? '#898781';  // same order as the replay
+const MAX_SIDE_KM = 25;
+const RX_DEFAULT = { mast_m: 10, gain_dbi: 6, noise_figure_db: 6, threshold_db: 6, bearing_sigma_deg: 2.0, bearing_bias_deg: 0 };
+const ALT_RANGE = { quadcopter: [40, 150], fixed_wing_recon: [300, 1000], delta_wing: [150, 1500], decoy: [150, 1500] };  // m above ground, for random drones
+
+const types = Object.fromEntries(Object.entries(await (await fetch('../drones.json')).json()).filter(([k]) => !k.startsWith('_')));
+const load = async url => { const r = await fetch(url, { cache: 'no-store' }).catch(() => null); return r?.ok ? r.json() : null; };
+let sc = await load('../out/planned/scenario.json') ?? await load('../scenario.json');
+
+// ---- map ----
+const map = L.map('map', { zoomControl: true });
+const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Imagery: Esri, Maxar, Earthstar Geographics' }).addTo(map);
+const topo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Map: Esri, © OpenStreetMap contributors' });
+L.control.layers({ Satellite: sat, Map: topo }).addTo(map);
+const layer = L.layerGroup().addTo(map);
+let mode = null, corner = null, preview = null;  // mode: 'area' | 'receiver' | {drone: index}
+
+// ---- helpers ----
+const r5 = v => Math.round(v * 1e5) / 1e5;
+const sideKm = b => [(b[2] - b[0]) * 111.32 * Math.cos((b[1] + b[3]) / 2 * Math.PI / 180), (b[3] - b[1]) * 110.54];
+const inBox = (lat, lon, b = sc.bbox) => b && lon >= b[0] && lon <= b[2] && lat >= b[1] && lat <= b[3];
+const nextId = (prefix, list, pad) => { for (let k = 1; ; k++) { const id = prefix + (pad ? String(k).padStart(2, '0') : k); if (!list.some(o => o.id === id)) return id; } };
+function bboxProblem(b) {
+  if (!b) return 'Pick an area first.';
+  const [w, h] = sideKm(b);
+  if (Math.floor(b[0]) !== Math.floor(b[2]) || Math.floor(b[1]) !== Math.floor(b[3])) return 'The area crosses a whole degree of latitude or longitude. Keep it inside one terrain tile.';
+  if (w > MAX_SIDE_KM || h > MAX_SIDE_KM) return `The area is ${w.toFixed(1)} × ${h.toFixed(1)} km. Keep each side under ${MAX_SIDE_KM} km.`;
+  if (w < 1 || h < 1) return 'The area is smaller than 1 km a side.';
+  return null;
+}
+function banner(text) { $('#banner').hidden = !text; $('#banner').textContent = text ?? ''; document.body.classList.toggle('drawing', !!text); }
+function setMode(m) {
+  mode = m;
+  corner = null;
+  preview?.remove();
+  preview = null;
+  map.doubleClickZoom[m ? 'disable' : 'enable']();
+  banner(m === 'area' ? 'Click one corner of the area, then the opposite corner. Esc cancels.'
+    : m === 'receiver' ? 'Click to place receivers. Esc when done.'
+    : m ? `Click to add waypoints for ${sc.objects[m.drone].id}. The first point is the start. Esc or double-click when done.` : null);
+  document.querySelectorAll('[data-draw]').forEach(b => b.classList.toggle('on', m?.drone === +b.dataset.draw));
+  $('#a-pick').classList.toggle('on', m === 'area');
+  $('#r-add').classList.toggle('on', m === 'receiver');
+}
+
+// ---- drawing the state on the map ----
+function draw() {
+  layer.clearLayers();
+  if (sc.bbox) {
+    const [w, s, e, n] = sc.bbox, bad = bboxProblem(sc.bbox);
+    L.rectangle([[s, w], [n, e]], { color: bad ? '#b45309' : '#151a23', weight: 2, fill: true, fillOpacity: 0.04, dashArray: bad ? '6 4' : null, interactive: false }).addTo(layer);
+  }
+  sc.sensors.forEach(s => {
+    const m = L.marker([s.lat, s.lon], { draggable: true, icon: L.divIcon({ className: 'rx-icon', html: `<b></b><span>${s.id}</span>`, iconSize: [0, 0] }) }).addTo(layer);
+    m.on('dragend', e => { const p = e.target.getLatLng(); s.lat = r5(p.lat); s.lon = r5(p.lng); check(); });
+  });
+  sc.objects.forEach((o, k) => {
+    const c = color(k), pts = o.waypoints;
+    const line = L.polyline(pts, { color: c, weight: 3, opacity: 0.9 }).addTo(layer);
+    if (o.loop && pts.length > 2) L.polyline([pts.at(-1), pts[0]], { color: c, weight: 2, opacity: 0.7, dashArray: '4 6' }).addTo(layer);
+    pts.forEach((p, i) => {
+      const m = L.marker(p, { draggable: true, icon: L.divIcon({ className: `wp-icon${i ? '' : ' first'}`, html: `<i style="background:${c}"></i>${i ? '' : `<span class="wp-label">${o.id}</span>`}`, iconSize: [0, 0] }) }).addTo(layer);
+      m.on('drag', e => { const q = e.target.getLatLng(); pts[i] = [r5(q.lat), r5(q.lng)]; line.setLatLngs(pts); });
+      m.on('dragend', check);
+      m.on('contextmenu', () => { if (pts.length > 1) { pts.splice(i, 1); render(); } });
+    });
+  });
+}
+
+// ---- sidebar ----
+const short = k => k[0].toUpperCase() + k.slice(1).replace(/_/g, ' ');  // 'fixed_wing_recon' -> 'Fixed wing recon'
+const typeOptions = sel => Object.entries(types).map(([k, t]) => `<option value="${k}" title="${t.name}"${k === sel ? ' selected' : ''}>${short(k)}</option>`).join('');
+function renderLists() {
+  $('#r-count').textContent = `${sc.sensors.length} placed`;
+  $('#r-list').innerHTML = sc.sensors.map((s, k) => `<div class="item" data-r="${k}">
+      <div class="head"><i class="dot" style="background:var(--ink);border-radius:2px;transform:rotate(45deg)"></i>${s.id}<button class="x" data-del-r="${k}" aria-label="Remove ${s.id}">✕</button></div>
+      <div class="cols3">
+        <label class="f">Mast (m)<input type="number" min="1" max="100" step="1" data-k="mast_m" value="${s.mast_m}"></label>
+        <label class="f">Bearing σ (°)<input type="number" min="0.1" max="20" step="0.1" data-k="bearing_sigma_deg" value="${s.bearing_sigma_deg}"></label>
+        <label class="f">Threshold (dB)<input type="number" min="0" max="30" step="0.5" data-k="threshold_db" value="${s.threshold_db}"></label>
+      </div></div>`).join('') || '<div class="hint">No receivers yet. A position fix needs at least two.</div>';
+  $('#d-count').textContent = `${sc.objects.length} planned`;
+  $('#d-list').innerHTML = sc.objects.map((o, k) => {
+    const t = types[o.type], em = { ...t.emitter, ...o };
+    return `<div class="item" data-d="${k}">
+      <div class="head"><i class="dot" style="background:${color(k)}"></i>${o.id}<span class="hint" style="margin:0;font-weight:400">${o.waypoints.length} waypoint${o.waypoints.length === 1 ? '' : 's'}</span>
+        <button data-draw="${k}">${o.waypoints.length ? 'Add waypoints' : 'Draw path'}</button><button class="x" data-del-d="${k}" aria-label="Remove ${o.id}">✕</button></div>
+      <div class="cols4">
+        <label class="f">Type<select data-k="type">${typeOptions(o.type)}</select></label>
+        <label class="f">Height (m)<input type="number" min="10" max="5000" step="10" data-k="alt_agl_m" value="${o.alt_agl_m}"></label>
+        <label class="f">Speed (m/s)<input type="number" min="1" max="${t.flight.max_speed_mps}" step="1" data-k="speed_ms" value="${o.speed_ms ?? t.flight.cruise_speed_mps}"></label>
+        <label class="loop"><input type="checkbox" data-k="loop"${o.loop ? ' checked' : ''}>loop</label>
+      </div>
+      <div class="cols3" style="margin-top:6px">
+        <label class="f">Radio (MHz)<input type="number" min="100" max="10000" step="0.5" data-k="freq_mhz" value="${em.freq_mhz}"></label>
+        <label class="f">EIRP (dBm)<input type="number" min="-10" max="50" step="1" data-k="eirp_dbm" value="${em.eirp_dbm}"></label>
+        <label class="f">Bandwidth (MHz)<input type="number" min="0.01" max="100" step="0.01" data-k="bandwidth_mhz" value="${em.bandwidth_mhz}"></label>
+      </div></div>`;
+  }).join('') || '<div class="hint">No drones yet.</div>';
+}
+function renderForm() {
+  $('#s-name').value = sc.name ?? '';
+  $('#s-region').value = sc.region ?? '';
+  $('#s-start').value = (sc.start_utc ?? '2026-11-03T14:00:00Z').replace('Z', '').slice(0, 19);
+  $('#s-dur').value = Math.round((sc.duration_s ?? 1200) / 60);
+  $('#s-seed').value = sc.seed ?? 42;
+  $('#s-shadow').value = sc.shadowing_db ?? 4;
+  $('#s-wfrom').value = sc.wind?.from_deg ?? 270;
+  $('#s-wspeed').value = sc.wind?.speed_mps ?? 0;
+}
+function check() {
+  const problems = [], b = sc.bbox, bad = bboxProblem(b);
+  if (bad) problems.push(bad);
+  if (b) {
+    const [w, h] = sideKm(b);
+    $('#a-size').textContent = `${w.toFixed(1)} × ${h.toFixed(1)} km`;
+    sc.sensors.filter(s => !inBox(s.lat, s.lon)).forEach(s => problems.push(`${s.id} is outside the area.`));
+    sc.objects.filter(o => o.waypoints.some(([la, lo]) => !inBox(la, lo))).forEach(o => problems.push(`${o.id} has waypoints outside the area.`));
+  }
+  if (!sc.sensors.length) problems.push('Place at least one receiver.');
+  sc.objects.filter(o => !o.waypoints.length).forEach(o => problems.push(`${o.id} has no path yet.`));
+  if (!sc.objects.length) problems.push('Add at least one drone.');
+  $('#a-hint').classList.toggle('bad', !!bad);
+  $('#msg').className = 'hint' + (problems.length ? ' bad' : '');
+  $('#msg').textContent = problems[0] ?? (sc.sensors.length < 2 ? 'Ready. With one receiver there are no position fixes, only detections.' : 'Ready to run.');
+  $('#run').disabled = problems.length > 0;
+  draw();
+  return problems;
+}
+function render() { renderLists(); check(); }
+
+$('#side').addEventListener('change', e => {
+  const el = e.target, k = el.dataset.k, val = el.type === 'checkbox' ? el.checked : el.type === 'number' ? +el.value : el.value;
+  const r = el.closest('[data-r]'), d = el.closest('[data-d]');
+  if (r && k) sc.sensors[+r.dataset.r][k] = val;
+  if (d && k) {
+    const o = sc.objects[+d.dataset.d];
+    o[k] = val;
+    if (k === 'type') {  // a new type brings its own radio and cruise speed
+      Object.assign(o, Object.fromEntries(Object.entries(types[val].emitter).filter(([key]) => key !== 'what')), { speed_ms: types[val].flight.cruise_speed_mps });
+      renderLists();
+    }
+  }
+  const sv = id => +$(id).value;
+  Object.assign(sc, { name: $('#s-name').value || 'Untitled', region: $('#s-region').value, start_utc: `${$('#s-start').value.slice(0, 19)}${$('#s-start').value.length === 16 ? ':00' : ''}Z`,
+    duration_s: Math.min(Math.max(sv('#s-dur'), 1), 120) * 60, seed: Math.round(sv('#s-seed')), shadowing_db: sv('#s-shadow'),
+    wind: { from_deg: sv('#s-wfrom'), speed_mps: sv('#s-wspeed') } });
+  check();
+});
+$('#side').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.delR != null) { sc.sensors.splice(+b.dataset.delR, 1); setMode(null); render(); }
+  if (b.dataset.delD != null) { sc.objects.splice(+b.dataset.delD, 1); setMode(null); render(); }
+  if (b.dataset.draw != null) setMode(mode?.drone === +b.dataset.draw ? null : { drone: +b.dataset.draw });
+});
+$('#a-pick').onclick = () => setMode(mode === 'area' ? null : 'area');
+$('#a-view').onclick = () => { const v = map.getBounds(); sc.bbox = [r5(v.getWest()), r5(v.getSouth()), r5(v.getEast()), r5(v.getNorth())]; setMode(null); check(); };
+$('#r-add').onclick = () => setMode(mode === 'receiver' ? null : 'receiver');
+$('#d-type').innerHTML = typeOptions('quadcopter');
+$('#d-rtype').innerHTML += typeOptions(null);
+function newDrone(type, waypoints = [], alt) {
+  const t = types[type];
+  const o = { id: nextId('drone_', sc.objects, true), type, alt_agl_m: alt ?? Math.round((ALT_RANGE[type] ?? [100, 300]).reduce((a, b) => (a + b) / 2) / 10) * 10,
+              speed_ms: t.flight.cruise_speed_mps, ...Object.fromEntries(Object.entries(t.emitter).filter(([k]) => k !== 'what')), waypoints };
+  sc.objects.push(o);
+  return o;
+}
+$('#d-add').onclick = () => { newDrone($('#d-type').value); render(); setMode({ drone: sc.objects.length - 1 }); };
+$('#d-random').onclick = () => {
+  if (bboxProblem(sc.bbox)) return check();
+  const [w, s, e, n] = sc.bbox, keys = Object.keys(types), mx = 111320 * Math.cos((s + n) / 2 * Math.PI / 180);
+  const rand = (a, b) => a + Math.random() * (b - a);
+  for (let k = 0; k < Math.min(Math.max(+$('#d-n').value, 1), 30); k++) {
+    const type = $('#d-rtype').value === 'mixed' ? keys[Math.floor(Math.random() * keys.length)] : $('#d-rtype').value;
+    const fixedWing = types[type].type !== 'multirotor', pts = [];
+    const minGap = fixedWing ? 1500 : 400;  // m between waypoints, so a fixed-wing has room to turn
+    for (let tries = 0; pts.length < 2 + Math.floor(Math.random() * 3) && tries < 200; tries++) {
+      const p = [r5(rand(s + (n - s) * 0.08, n - (n - s) * 0.08)), r5(rand(w + (e - w) * 0.08, e - (e - w) * 0.08))];
+      if (pts.every(q => Math.hypot((p[0] - q[0]) * 110540, (p[1] - q[1]) * mx) > minGap)) pts.push(p);
+    }
+    const [lo, hi] = ALT_RANGE[type] ?? [100, 300];
+    newDrone(type, pts, Math.round(rand(lo, hi) / 10) * 10).loop = fixedWing && Math.random() < 0.5;
+  }
+  render();
+};
+
+// ---- map clicks ----
+map.on('click', e => {
+  const { lat, lng } = e.latlng;
+  if (mode === 'area') {
+    if (!corner) { corner = e.latlng; return; }
+    sc.bbox = [r5(Math.min(corner.lng, lng)), r5(Math.min(corner.lat, lat)), r5(Math.max(corner.lng, lng)), r5(Math.max(corner.lat, lat))];
+    setMode(null);
+    check();
+  } else if (mode === 'receiver') {
+    sc.sensors.push({ id: nextId('RF', sc.sensors), lat: r5(lat), lon: r5(lng), ...RX_DEFAULT, bearing_bias_deg: Math.round((Math.random() * 3 - 1.5) * 10) / 10 });
+    render();
+  } else if (mode?.drone != null) {
+    sc.objects[mode.drone].waypoints.push([r5(lat), r5(lng)]);
+    render();
+    setMode(mode);  // keep the draw button lit after the list re-renders
+  }
+});
+map.on('dblclick', () => {
+  if (mode?.drone == null) return;
+  const w = sc.objects[mode.drone].waypoints;  // a double-click also fired two clicks: drop the duplicates
+  while (w.length > 1 && Math.hypot(w.at(-1)[0] - w.at(-2)[0], w.at(-1)[1] - w.at(-2)[1]) < 2e-4) w.pop();
+  setMode(null);
+  render();
+});
+map.on('mousemove', e => {
+  if (mode !== 'area' || !corner) return;
+  const b = L.latLngBounds(corner, e.latlng);
+  if (!preview) preview = L.rectangle(b, { color: '#151a23', weight: 1, dashArray: '4 4', fillOpacity: 0.06, interactive: false }).addTo(map);
+  preview.setBounds(b);
+  const [w, h] = sideKm([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+  banner(`${w.toFixed(1)} × ${h.toFixed(1)} km. Click the opposite corner.`);
+});
+addEventListener('keydown', e => { if (e.key === 'Escape') setMode(null); });
+
+// ---- run ----
+$('#run').onclick = async () => {
+  if (check().length) return;
+  $('#run').disabled = true;
+  $('#msg').className = 'hint';
+  $('#msg').textContent = 'Simulating… a new area first downloads its terrain, which takes a few seconds.';
+  const body = JSON.stringify({ ...sc, dt_s: sc.dt_s ?? 1, shadowing_tau_s: sc.shadowing_tau_s ?? 15 });
+  const res = await fetch('/api/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }).catch(() => null);
+  const out = await res?.json().catch(() => null);
+  if (res?.ok && out?.ok) {
+    $('#msg').className = 'hint';
+    $('#msg').innerHTML = `Done: ${Object.values(out.fixes).reduce((a, b) => a + b, 0)} position fixes. Opening the replay…`;
+    location.href = '../viewer/?planned=1';
+    return;
+  }
+  $('#run').disabled = false;
+  $('#msg').className = 'hint bad';
+  $('#msg').textContent = res?.status === 501 || !res ? 'No simulation server. Start it with: .venv/bin/python serve.py' : out?.error ?? `The server answered ${res.status}.`;
+};
+$('#dl').onclick = () => {
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(sc, null, 2)], { type: 'application/json' })), download: 'scenario.json' });
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+$('#reset').onclick = async () => { sc = await load('../scenario.json'); start(); };
+
+function start() {
+  sc.sensors ??= [];
+  sc.objects ??= [];
+  sc.objects.forEach(o => { o.waypoints ??= []; if (!types[o.type]) o.type = Object.keys(types)[0]; });
+  setMode(null);
+  renderForm();
+  render();
+  if (sc.bbox) map.fitBounds([[sc.bbox[1], sc.bbox[0]], [sc.bbox[3], sc.bbox[2]]], { padding: [30, 30] });
+  else map.setView([49.0, 31.5], 6);
+}
+sc ??= { name: 'New scenario', region: '', start_utc: '2026-11-03T14:00:00Z', duration_s: 1200, dt_s: 1, seed: 42, shadowing_db: 4, shadowing_tau_s: 15, sensors: [], objects: [] };
+start();
+</script>
+</body>
+</html>

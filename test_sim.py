@@ -55,6 +55,20 @@ def test_crossed_bearings_find_the_target():
     assert np.hypot(*(est - target)) < 1 and ce > 0
 
 
+def test_coverage_falls_with_distance_and_needs_two_receivers():
+    t = flat()
+    rx = lambda x, y: {"x": x, "y": y, "z": 110.0, "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": 2.0}
+    em = {"freq_mhz": 2437.5, "eirp_dbm": 10, "bandwidth_mhz": 10}
+    grid, heard, located, err = sim.coverage(t, [rx(0.0, 0.0)], em, [100], 4.0, n=20)
+    row = heard[0, grid["ny"] // 2]  # west -> east through the receiver
+    mid = grid["nx"] // 2
+    assert row[mid] > 0.99 and np.all(np.diff(row[mid:]) <= 1e-9) and row[-1] < row[mid]
+    assert located.max() < 1e-9 and np.isnan(err).all()  # one receiver hears, but cannot locate
+    strong = {**em, "eirp_dbm": 27}
+    _, _, located2, err2 = sim.coverage(t, [rx(-3000.0, 0.0), rx(3000.0, 0.0)], strong, [100], 4.0, n=20)
+    assert located2.max() > 0.9 and np.nanmin(err2) < 400  # best off the baseline, where the bearings cross square
+
+
 def test_quadcopter_respects_its_limits_and_lands_on_target():
     q = DRONES["quadcopter"]
     obj = {"id": "q", "start": {**ll(0, 0), "alt_m": 0}, "plan": [
@@ -98,6 +112,22 @@ def test_adding_a_drone_does_not_move_the_others():
     area = {"name": "t", "region": "t", "bbox": BBOX}
     a, b = sim.make_scenario(area, 3, 2, 7), sim.make_scenario(area, 4, 3, 7)
     assert a["sensors"] == b["sensors"][:3] and a["objects"] == b["objects"][:2]
+
+
+def test_game_birds_are_only_heard_while_they_are_there():
+    area = {"name": "t", "region": "t", "bbox": BBOX}
+    huts = [[49.71, 31.44], [49.77, 31.47], [49.72, 31.53]]
+    sc = sim.make_game(area, huts, 4, 5)
+    assert sim.make_game(area, huts + [[49.75, 31.50]], 6, 5)["objects"][:4] == sc["objects"]  # more birds or huts move nobody
+    with tempfile.TemporaryDirectory() as d:
+        b = sim.run(sc, d)
+    for o in sc["objects"]:
+        first, last = b["spawn"][o["id"]]
+        assert first == o["start_s"] and last > first
+        for s in b["sensors"]:
+            det = np.array(b["links"][f"{s['id']}|{o['id']}"]["det"])
+            assert not det[(np.array(b["t"]) < first) | (np.array(b["t"]) > last)].any()
+        assert all(first <= f[0] <= last for f in b["fused"][o["id"]])
 
 
 if __name__ == "__main__":

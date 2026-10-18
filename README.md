@@ -6,20 +6,24 @@ A single LLM prompt can produce numbers that look correct. This engine computes 
 
 The drones fly a kinematic flight model with each type's real limits (speed, acceleration, climb, tilt or bank), so they brake, lean and bank through turns. The viewer shows each one as a 3D model with that attitude.
 
+Plan a scenario on a map (area, receivers, drones), run it, and replay it: how certain the receivers were about each drone along its path, and a coverage heatmap of where a drone would be heard or located at each height.
+
 ![The four drone models, from above and as a ground camera sees them](models/previews/all.png)
 
 ## Run
 
 ```bash
 uv venv && uv pip install -r requirements.txt    # or: pip install -r requirements.txt
-.venv/bin/python serve.py                        # then open http://localhost:8765/viewer/
+.venv/bin/python serve.py                        # then open http://localhost:8765/viewer/ (or /planner/, /cute/)
 .venv/bin/python test_sim.py                     # faithfulness checks
 .venv/bin/python sim.py                          # optional: scenario.json -> out/, no viewer
 ```
 
-1. Choose one of the 4 areas.
+1. Choose one of the 4 areas, or plan your own scenario.
 2. Set the number of receivers and drones. The engine runs again (in a few seconds) and puts them at random positions.
 3. Click **New layout** to get a new seed and new positions.
+
+The switch at the top flips between two views of the same data: **Pro**, the detailed radio view, and **Simple**, *Sky Spotters*, the bird game. Flipping keeps the area, the receivers and the moment.
 
 The first visit to an area downloads part of one Copernicus GLO-30 tile from public S3 (no key). The engine keeps it in `.cache/`.
 
@@ -31,6 +35,25 @@ The URL always holds the current layout, so you can share it. Example: `viewer/?
 - `ground`: `sat`, `map` or `elev`
 - `show`: `truth`, `sensed` or `both`
 - `sel`: a receiver|object pair
+- `heat`: open the coverage heatmap with `located`, `heard` or `err`
+- `play=1`: start playing
+
+Two more sources: `viewer/?game=<area>&huts=<lat,lon;...>&birds=6&seed=3` replays a round of the bird game, and `viewer/?planned=1` shows the last scenario from the planner.
+
+## Planner (`planner/`)
+
+Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), click to place receivers, and add drones: choose a type and click its waypoints, or add N random drones of one or mixed types. Each drone's height, speed, loop and radio (frequency, EIRP, bandwidth) can be changed; a new type brings its own radio and cruise speed from `drones.json`. Markers drag; right-click a waypoint to delete it. **Run simulation** sends the scenario to `serve.py` (`POST /api/simulate`), which runs it into `out/planned/` and opens the replay. **Download JSON** saves it as a scenario file.
+
+## Pro view (`viewer/`)
+
+- **Layers:** the path as the whole flight, flown so far, or the last minute; coloured by drone or by certainty (located by two or more receivers, heard by one only, unseen); an error band as wide as each fix's position error (up to 500 m each side, fading as the error grows); toggles for labels, height lines, bearings, fix circles and receivers; drone size.
+- **Hover** a drone, or its row in the Drones card, to highlight it: it glows, its path comes forward and the others dim. The tooltip gives its height, speed, heading and what the receivers make of it.
+- **Coverage heatmap:** for each drone radio, the chance that a drone at a point would be located (two or more receivers), heard (one or more), or the expected position error. Show one height above ground as a sheet, or all heights at once as a 3D cloud. Darker blue means more certain.
+- Propellers spin while the replay plays.
+
+## Simple view: Sky Spotters (`cute/`)
+
+A small game on the same engine. Place your stations (birdwatcher huts) on the map, release the birds, and catch as many as you can before the round ends. A bird is caught the first second two stations cross their bearings on it (a fix). Birds (a hummingbird for the quadcopter, a stork for the recon drone, a swift for the delta wing, a pigeon for the decoy) fly in from the edges at random times, cross and leave. Each station shows how many birds it has seen, how confident it is, and its signal over time. A round is `POST /api/game`; the same stations, bird count and seed always give the same round.
 
 ## Files
 
@@ -38,13 +61,15 @@ The URL always holds the current layout, so you can share it. Example: `viewer/?
 |---|---|
 | `areas.json` | The example areas. To add an area, add a line. The box must stay inside one 1° tile |
 | `scenario.json` | A hand-written example scenario for `sim.py` |
-| `sim.py` | Engine: random layout → DEM → truth → radio links → crossed bearings → outputs |
-| `serve.py` | Serves the viewer and runs the engine for each request |
+| `sim.py` | Engine: random layout or game round → DEM → truth → radio links → crossed bearings → coverage → outputs |
+| `serve.py` | Serves the pages and runs the engine for each request: layouts, game rounds, planner scenarios |
 | `flight.py` | Flight model: drone type + flight plan → 10 Hz track with heading, pitch and roll |
 | `drones.json` | Drone types: size, mass, endurance, flight limits, 3D model |
 | `models/` | One GLB model per drone type, plus the Blender scripts that build and render them |
+| `planner/index.html` | Scenario planner on a map. One file, Leaflet from a CDN |
+| `cute/index.html` | Simple view, *Sky Spotters*: place stations, catch birds. Same engine and data |
 | `test_sim.py` | Checks that the physics behaves as it should |
-| `viewer/index.html` | 3D replay. One file, libraries come from a CDN, no build step |
+| `viewer/index.html` | Pro view: 3D replay. One file, libraries come from a CDN, no build step |
 
 ## Random layout
 
@@ -102,7 +127,7 @@ blender -b -P models/render.py -- models/delta_wing.glb frame.png --heading 250 
 | `fused.cot.xml` | Positions from crossed bearings, as TAK Cursor on Target events | Sensor data |
 | `fused.csv` | The same fixes, with `source_object_id` and the error against the truth | Answer key |
 | `rf_budget.csv` | Full link budget for every receiver, object and second, detected or not | Explanation |
-| `bundle.json` | Everything the viewer needs | Viewer |
+| `bundle.json` | Everything the viewer needs, including the coverage grids | Viewer |
 
 Every sensor record has a `source_object_id` column. All files use the same UTC clock.
 
@@ -119,12 +144,15 @@ For each receiver, each drone and each second:
 
 When two or more receivers detect the same drone, a weighted least-squares crossing gives a position. `ce` comes from the covariance of that solution.
 
+**Coverage** uses the same physics on a grid (40 cells across, at 50, 100, 250, 500 and 1,000 m above ground by default; set `"coverage": {"grid": 40, "alts_agl_m": [...]}` in the scenario). For each receiver it computes the mean SNR, then the chance of detection given the log-normal shadowing: Φ((SNR − threshold) / σ). Heard = at least one receiver detects, located = at least two. The expected error is `ce` of a crossing by every receiver that probably hears the point. Each distinct drone radio gets its own grids.
+
 ## Checks (`test_sim.py`)
 
 - On flat ground, the loss always increases with distance.
 - A 150 m ridge between the receiver and the drone adds more than 15 dB of loss.
 - Bearing noise grows as the SNR drops.
 - Crossed bearings with no noise find the exact target.
+- Coverage falls with distance from a receiver; one receiver can hear but never locate; two receivers can.
 - A quadcopter keeps to its speed, acceleration and tilt limits, and lands where it took off.
 - A fixed-wing holds an orbit in a 15 m/s wind without passing its bank limit, and its speed over the ground swings by the wind.
 - The same seed gives byte-identical output files.
@@ -139,7 +167,9 @@ Each limit has a `ponytail:` comment in `sim.py` that tells where to extend the 
 - The fusion step uses `source_object_id` to group detections. A real system must group them by frequency and time.
 - The area must stay inside one 1° DEM tile. The local metre frame is flat (good to about 15 km).
 - Drones follow the ground at a fixed height above it. They do not climb over ridges.
-- The wind is the same at every height. Propellers do not spin in the viewer.
+- The wind is the same at every height.
+- Coverage ignores receiver bias and the fusion's 10° minimum crossing angle, so it is slightly optimistic where bearings cross shallowly.
+- When a plan ends early, a fixed-wing circles its last waypoint and may leave the area; the terrain is clamped at the edge there.
 
 ## Next tasks
 
