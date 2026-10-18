@@ -114,6 +114,14 @@ def test_adding_a_drone_does_not_move_the_others():
     assert a["sensors"] == b["sensors"][:3] and a["objects"] == b["objects"][:2]
 
 
+def test_layout_settings_reach_the_scenario_and_are_clamped():
+    area = {"name": "t", "region": "t", "bbox": BBOX}
+    sc = sim.make_scenario(area, 3, 6, 7, {"mix": "attack", "mast_m": 99, "duration_s": 600, "wind_mps": 8, "mix_typo": 1})
+    assert {o["type"] for o in sc["objects"]} <= {"fixed_wing_recon", "delta_wing", "decoy"}
+    assert all(s["mast_m"] == 40 for s in sc["sensors"]) and sc["duration_s"] == 600 and sc["wind"]["speed_mps"] == 8
+    assert sim.make_scenario(area, 3, 2, 7)["objects"] == sim.make_scenario(area, 3, 2, 7, {})["objects"]  # defaults unchanged
+
+
 def test_game_birds_are_only_heard_while_they_are_there():
     area = {"name": "t", "region": "t", "bbox": BBOX}
     huts = [[49.71, 31.44], [49.77, 31.47], [49.72, 31.53]]

@@ -44,6 +44,12 @@
   #mode button:disabled { opacity: .4; cursor: default; }
   .plan { margin-top: 22px; color: var(--muted); font-size: 14px; } .plan a { color: var(--ink); font-weight: 600; }
   #ctl-fixed { color: var(--muted); }
+  #settings { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+  #settings > summary { font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
+  #settings > summary::after { content: '▸'; color: var(--faint); } #settings[open] > summary::after { content: '▾'; }
+  #settings .opt { margin: 5px 0; } #settings .opt select { width: 140px; }
+  #settings .opt input[type=range] { width: 96px; } #settings output { min-width: 44px; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+  #settings .wind { display: flex; gap: 4px; align-items: center; } #settings .wind input { width: 62px; }
   .ctl { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; }
   .step { display: flex; align-items: center; gap: 4px; }
   .step b { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
@@ -139,6 +145,15 @@
       <div class="step"><button data-k="rx" data-d="-1" aria-label="Remove a receiver">−</button><b id="n-rx"></b><button data-k="rx" data-d="1" aria-label="Add a receiver">+</button></div></div>
     <div class="ctl"><span data-tip="Number of drones. Each drone gets a random type, height and route.">Drones</span>
       <div class="step"><button data-k="dr" data-d="-1" aria-label="Remove a drone">−</button><b id="n-dr"></b><button data-k="dr" data-d="1" aria-label="Add a drone">+</button></div></div>
+    <details id="settings">
+      <summary>Scenario settings</summary>
+      <label class="opt">Length <select data-s="duration_s"><option value="600">10 min</option><option value="1200">20 min</option><option value="1800">30 min</option><option value="3600">60 min</option></select></label>
+      <label class="opt" data-tip="Which drone types the random layout picks.">Drone mix <select data-s="mix"><option value="balanced">Balanced</option><option value="quadcopters">Mostly quadcopters</option><option value="fixed_wing">Mostly fixed-wing</option><option value="attack">Attack wave</option></select></label>
+      <label class="opt" data-tip="Height of every receiver mast. A taller mast clears more terrain.">Mast height <input type="range" data-s="mast_m" min="2" max="40" step="1"><output data-o="mast_m"></output></label>
+      <label class="opt" data-tip="Bearing noise of a receiver at 20 dB SNR, 1σ. It grows as the signal gets weaker.">Bearing σ <input type="range" data-s="bearing_sigma_deg" min="0.5" max="10" step="0.5"><output data-o="bearing_sigma_deg"></output></label>
+      <label class="opt" data-tip="Spread of the slow random fading on each link (log-normal shadowing).">Shadowing <input type="range" data-s="shadowing_db" min="0" max="12" step="0.5"><output data-o="shadowing_db"></output></label>
+      <div class="opt" data-tip="Where the wind comes from, in degrees (270 = west), and its speed. Fixed-wing drones crab into it.">Wind <span class="wind"><input type="number" data-s="wind_from_deg" min="0" max="359" step="15" aria-label="Wind from, degrees">°<input type="number" data-s="wind_mps" min="0" max="25" step="1" aria-label="Wind speed, m/s">m/s</span></div>
+    </details>
     </div>
     <div id="ctl-fixed" hidden></div>
     <div class="acts">
@@ -397,6 +412,14 @@ let scene, world, blk, toScene, groundH;
 let view = 'dialog', area = null, B, S, T, N, objIds = [], color;
 let source = { kind: 'layout' };  // layout: /api/run · game: /api/game round · planned: out/planned/bundle.json
 const state = { rx: 3, dr: 2, seed: 42 };
+const SETTINGS = { duration_s: 1200, mix: 'balanced', mast_m: 10, bearing_sigma_deg: 2, shadowing_db: 4, wind_from_deg: 270, wind_mps: 0 };
+const UNITS = { mast_m: ' m', bearing_sigma_deg: '°', shadowing_db: ' dB' };
+let settings = { ...SETTINGS };
+function showSettings() {
+  document.querySelectorAll('#settings [data-s]').forEach(el => { el.value = settings[el.dataset.s]; });
+  document.querySelectorAll('#settings [data-o]').forEach(el => { el.textContent = settings[el.dataset.o] + UNITS[el.dataset.o]; });
+}
+const settingsQuery = () => Object.entries(settings).filter(([k, v]) => v !== SETTINGS[k]).map(([k, v]) => `&${k}=${v}`).join('');
 const LIMITS = { rx: [2, 6], dr: [1, 6] };  // 2 receivers minimum, so bearings can cross
 let t = 0, playing = false, show = 'both', ground = 'sat', selected = null, lastI = -1;
 let labels = [], hoverables = [], fatMats = [], drones = {}, bearings = {}, rings = {}, fixAt = {}, status = {}, scenePts = {}, hoverId = null;
@@ -594,7 +617,7 @@ async function runEngine(fit = false) {
   const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const res = source.kind === 'planned' ? await fetch('../out/planned/bundle.json', { cache: 'no-store' })
     : source.kind === 'game' ? await post('/api/game', { area: area.id, huts: source.huts, birds: source.birds, seed: source.seed })
-    : await post('/api/run', { area: area.id, receivers: state.rx, drones: state.dr, seed: state.seed });
+    : await post('/api/run', { area: area.id, receivers: state.rx, drones: state.dr, seed: state.seed, settings });
   const b = await res.json().catch(() => ({ error: res.ok ? 'the server sent something unreadable' : 'there is no simulation yet; run one from the planner' }));
   if (id !== reqId) return;  // a newer request is on its way
   if (b.error) { $('#status').textContent = `The engine stopped: ${b.error}`; return; }
@@ -603,7 +626,7 @@ async function runEngine(fit = false) {
   $('#status').textContent = '';
   history.replaceState(null, '', source.kind === 'planned' ? '?planned=1'
     : source.kind === 'game' ? `?game=${area.id}&huts=${source.huts.map(h => h.join(',')).join(';')}&birds=${source.birds}&seed=${source.seed}`
-    : `?area=${area.id}&rx=${state.rx}&dr=${state.dr}&seed=${state.seed}`);
+    : `?area=${area.id}&rx=${state.rx}&dr=${state.dr}&seed=${state.seed}${settingsQuery()}`);
   applyBundle(b, fit);
 }
 document.querySelectorAll('.step button').forEach(b => b.onclick = () => {
@@ -615,12 +638,18 @@ document.querySelectorAll('.step button').forEach(b => b.onclick = () => {
   debounce = setTimeout(() => runEngine(), 250);
 });
 $('#shuffle').onclick = () => { state.seed = Math.floor(Math.random() * 1e5); runEngine(); };
+document.querySelectorAll('#settings [data-s]').forEach(el => el[el.tagName === 'SELECT' ? 'onchange' : 'oninput'] = () => {
+  settings[el.dataset.s] = el.dataset.s === 'mix' ? el.value : +el.value;
+  showSettings();
+  clearTimeout(debounce);
+  debounce = setTimeout(() => runEngine(), 400);
+});
 $('#back').onclick = showDialog;
 $('#planner').onclick = () => { location.href = '../planner/'; };
 // Simple <-> Pro: the bird game gets the same area, stations, round and moment
 function simpleUrl() {
   if (view !== 'scene' || !B) return '../cute/';
-  const p = new URLSearchParams({ area: area.id, huts: S.sensors.map(s => `${s.lat},${s.lon}`).join(';'), t: Math.floor(t) });
+  const p = new URLSearchParams({ area: area.id, huts: S.sensors.map(s => `${s.lat},${s.lon},${s.mast_m}`).join(';'), t: Math.floor(t) });
   if (source.kind === 'game') { p.set('birds', source.birds); p.set('seed', source.seed); }
   if (playing) p.set('play', '1');
   return `../cute/?${p}`;
@@ -976,6 +1005,8 @@ const fromLink = () => {
   document.querySelectorAll('#show button').forEach(b => b.classList.toggle('on', b.dataset.v === show));
 };
 const huts = (q.get('huts') ?? '').split(';').filter(Boolean).map(h => h.split(',').map(Number));
+for (const k in SETTINGS) if (q.has(k)) settings[k] = k === 'mix' ? q.get(k) : +q.get(k);
+showSettings();
 if (gameArea && huts.length) {
   fromLink();
   await openArea(gameArea, {}, { kind: 'game', huts, birds: +(q.get('birds') ?? 6), seed: +(q.get('seed') ?? 1) });

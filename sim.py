@@ -216,13 +216,32 @@ def coverage(terrain, sensors, emitter, alts, shadowing_db, n=40):
 
 
 
-def make_scenario(area, n_rx, n_drones, seed):
+TYPES = ["quadcopter", "fixed_wing_recon", "delta_wing", "decoy"]
+MIXES = {"balanced": [0.5, 0.25, 0.15, 0.1], "quadcopters": [0.85, 0.1, 0.05, 0.0],
+         "fixed_wing": [0.1, 0.7, 0.15, 0.05], "attack": [0.0, 0.1, 0.6, 0.3]}  # weights over TYPES
+SETTINGS = {"duration_s": 1200, "shadowing_db": 4.0, "mix": "balanced", "mast_m": 10, "bearing_sigma_deg": 2.0,
+            "wind_from_deg": 270, "wind_mps": 0}
+
+
+def scenario_settings(given=None):
+    """Layout settings with defaults, clamped to ranges the engine and the viewer handle well."""
+    st = {**SETTINGS, **(given or {})}
+    clamp = lambda k, lo, hi: min(max(float(st[k]), lo), hi)
+    return {"duration_s": int(clamp("duration_s", 60, 3600)), "shadowing_db": clamp("shadowing_db", 0, 12),
+            "mix": st["mix"] if st["mix"] in MIXES else "balanced", "mast_m": clamp("mast_m", 2, 40),
+            "bearing_sigma_deg": clamp("bearing_sigma_deg", 0.5, 10), "wind_from_deg": clamp("wind_from_deg", 0, 360) % 360,
+            "wind_mps": clamp("wind_mps", 0, 25)}
+
+
+def make_scenario(area, n_rx, n_drones, seed, settings=None):
     """Random but presentable layout for an area from areas.json.
 
     Receivers go on high ground (top 25% of the inner box), spread far apart. Drones fly
     random loops inside the inner 80% of the box. Each receiver and drone has its own RNG
-    stream, so adding one never moves the others.
+    stream, so adding one never moves the others. `settings` (see SETTINGS) sets the length,
+    shadowing, drone mix, receiver mast and bearing accuracy, and the wind.
     """
+    st = scenario_settings(settings)
     terrain = Terrain(fetch_dem(area["bbox"]), area["bbox"])
     z, (ny, nx) = terrain.z, terrain.z.shape
     r0, c0 = ny // 10, nx // 10
@@ -238,12 +257,12 @@ def make_scenario(area, n_rx, n_drones, seed):
             pick = pick[[np.argmax(np.linalg.norm(pick[:, None] - np.array(placed)[None], axis=2).min(1))]]
         placed.append(pick[0])
         lat, lon = terrain.latlon(*pick[0])
-        sensors.append({"id": f"RF{i + 1}", "lat": round(float(lat), 5), "lon": round(float(lon), 5), "mast_m": 10,
-                        "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": 2.0,
+        sensors.append({"id": f"RF{i + 1}", "lat": round(float(lat), 5), "lon": round(float(lon), 5), "mast_m": st["mast_m"],
+                        "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": st["bearing_sigma_deg"],
                         "bearing_bias_deg": round(float(rng.normal(0, 1)), 1)})
 
     drones = json.loads((Path(__file__).parent / "drones.json").read_text())
-    types, weights = ["quadcopter", "fixed_wing_recon", "delta_wing", "decoy"], [0.5, 0.25, 0.15, 0.1]
+    types, weights = TYPES, MIXES[st["mix"]]
     objects, xmax, ymax = [], -terrain.xw * 0.8, terrain.yn * 0.8
     for i in range(n_drones):
         rng = np.random.default_rng([seed, 1, i])
@@ -260,14 +279,18 @@ def make_scenario(area, n_rx, n_drones, seed):
             "waypoints": [[round(float(a), 5), round(float(b), 5)] for a, b in zip(lat, lon)],
         })
 
-    return {"name": area["name"], "region": area["region"], "bbox": area["bbox"], "start_utc": "2026-11-03T14:00:00Z",
-            "duration_s": 1200, "dt_s": 1.0, "seed": seed, "shadowing_db": 4.0, "shadowing_tau_s": 15.0,
-            "sensors": sensors, "objects": objects}
+    sc = {"name": area["name"], "region": area["region"], "bbox": area["bbox"], "start_utc": "2026-11-03T14:00:00Z",
+          "duration_s": st["duration_s"], "dt_s": 1.0, "seed": seed, "shadowing_db": st["shadowing_db"], "shadowing_tau_s": 15.0,
+          "sensors": sensors, "objects": objects, "settings": st}
+    if st["wind_mps"]:
+        sc["wind"] = {"from_deg": st["wind_from_deg"], "speed_mps": st["wind_mps"]}
+    return sc
 
 
 def make_game(area, huts, n_birds, seed, duration_s=600):
-    """One round of the bird game: receivers where the player put them ([lat, lon] each), and
-    drones that appear at random times on one edge, cross the box and leave by another edge.
+    """One round of the bird game: receivers where the player put them ([lat, lon] or [lat, lon,
+    mast_m] each, mast 2-40 m, default 10), and drones that appear at random times on one edge,
+    cross the box and leave by another edge.
 
     Same drone types, radios and heights as make_scenario. Each bird has its own RNG stream,
     so changing the number of birds never moves the others.
@@ -275,11 +298,13 @@ def make_game(area, huts, n_birds, seed, duration_s=600):
     west, south, east, north = area["bbox"]
     terrain = Terrain(fetch_dem(area["bbox"]), area["bbox"])
     sensors = []
-    for i, (lat, lon) in enumerate(huts):
+    for i, hut in enumerate(huts):
+        lat, lon = hut[0], hut[1]
+        mast = min(max(float(hut[2]), 2.0), 40.0) if len(hut) > 2 else 10.0
         if not (south <= lat <= north and west <= lon <= east):
             raise ValueError(f"station {i + 1} is outside the area")
         rng = np.random.default_rng([seed, 0, i])
-        sensors.append({"id": f"RF{i + 1}", "lat": round(float(lat), 5), "lon": round(float(lon), 5), "mast_m": 10,
+        sensors.append({"id": f"RF{i + 1}", "lat": round(float(lat), 5), "lon": round(float(lon), 5), "mast_m": mast,
                         "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": 2.0,
                         "bearing_bias_deg": round(float(rng.normal(0, 1)), 1)})
 

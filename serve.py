@@ -2,8 +2,9 @@
 
 GET  /api/areas                 areas.json
 GET  /api/terrain?area=<id>[&cells=64]   DEM grid for the area previews (16-256 cells across)
-POST /api/run {area, receivers, drones, seed}   generate + simulate, returns the viewer bundle
-POST /api/game {area, huts: [[lat, lon]], birds, seed}   a round of the bird game, returns the bundle
+POST /api/run {area, receivers, drones, seed, settings?}   generate + simulate, returns the viewer bundle
+     settings: duration_s, shadowing_db, mix (balanced|quadcopters|fixed_wing|attack), mast_m, bearing_sigma_deg, wind_from_deg, wind_mps
+POST /api/game {area, huts: [[lat, lon, mast_m?]], birds, seed}   a round of the bird game, returns the bundle
 POST /api/simulate <scenario>   simulate a scenario from the planner into out/planned/
 """
 import json
@@ -77,13 +78,13 @@ class Handler(SimpleHTTPRequestHandler):
                 n_dr = min(max(int(req["drones"]), 1), 6)
                 seed = int(req["seed"]) % 1_000_000
                 with LOCK:
-                    return sim.run(sim.make_scenario(area, n_rx, n_dr, seed), ROOT / "out" / area["id"])
+                    return sim.run(sim.make_scenario(area, n_rx, n_dr, seed, req.get("settings")), ROOT / "out" / area["id"])
             return self.api(run)
         if self.path == "/api/game":
             def game():
                 req = self.body()
                 area = AREAS[req["area"]]
-                huts = [(float(la), float(lo)) for la, lo in req["huts"]][:6]
+                huts = [[float(v) for v in h[:3]] for h in req["huts"]][:6]  # [lat, lon] or [lat, lon, mast_m]
                 if not huts:
                     raise ValueError("place at least one station")
                 n = min(max(int(req.get("birds", 6)), 1), 12)
