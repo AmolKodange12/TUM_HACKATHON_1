@@ -150,7 +150,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+const DRONE_PX = 44;  // drones are drawn this many pixels across at any zoom; at real size they would be invisible
+const AIRFRAME = /grey|foam/;  // painted model parts take the drone's colour; black, glass and metal parts stay
 const COLORS = ['#e4572e', '#2e86ab', '#8e44ad', '#d4a017', '#16a085', '#c2185b'];
 const $ = s => document.querySelector(s);
 const AREAS = await (await fetch('/api/areas')).json();
@@ -348,6 +351,10 @@ async function openArea(a, opts = {}) {
   await runEngine(true);
 }
 
+// drone models: models/*.glb at real size, nose -Z, right +X, up +Y; a sphere if one is missing
+const loader = new GLTFLoader(), gltfs = {}, models = {};
+const loadModel = path => gltfs[path] ??= loader.loadAsync(`../${path}`).then(g => models[path] = g, () => null);
+
 let reqId = 0, debounce;
 async function runEngine(fit = false) {
   const id = ++reqId;
@@ -363,6 +370,8 @@ async function runEngine(fit = false) {
   const b = await res.json();
   if (id !== reqId) return;  // a newer request is on its way
   if (b.error) { $('#status').textContent = `The engine stopped: ${b.error}`; return; }
+  await Promise.all(Object.values(b.drones ?? {}).map(d => loadModel(d.model)));
+  if (id !== reqId) return;
   $('#status').textContent = '';
   history.replaceState(null, '', `?area=${area.id}&rx=${state.rx}&dr=${state.dr}&seed=${state.seed}`);
   applyBundle(b, fit);
@@ -425,14 +434,23 @@ function applyBundle(b, fit) {
   for (const id of objIds) {
     const tr = B.truth[id];
     truthGroup.add(fatLine(tr.x.map((x, i) => toScene(x, tr.y[i], tr.z[i])), color(id), 3, 0.7));
-    const m = new THREE.Mesh(new THREE.SphereGeometry(w * 0.007, 20, 12), new THREE.MeshStandardMaterial({ color: color(id) }));
-    m.castShadow = true;
+    const m = new THREE.Group(), gltf = models[B.drones?.[id]?.model];
+    const body = gltf ? gltf.scene.clone(true) : new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 12), new THREE.MeshStandardMaterial({ color: color(id) }));
+    const size = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3());
+    body.scale.setScalar(1 / Math.max(size.x, size.y, size.z));  // 1 unit across; the render loop scales it to DRONE_PX
+    m.add(body);
     const drop = line([new THREE.Vector3(), new THREE.Vector3()], color(id), { opacity: 0.5 });
     truthGroup.add(m, drop);
     label(id, m);
     const o = S.objects.find(o => o.id === id);
-    m.userData.tip = () => `${id}: ${o.type}, ${o.alt_agl_m} m above ground, transmits on ${o.freq_mhz} MHz. This is the true position.`;
-    hoverables.push(m);
+    const tip = () => `${id}: ${B.drones?.[id]?.name ?? o.type}, ${o.alt_agl_m} m above ground, transmits on ${o.freq_mhz} MHz. This is the true position.`;
+    body.traverse(c => {
+      if (!c.isMesh) return;
+      c.castShadow = true;
+      if (gltf && AIRFRAME.test(c.material.name)) { c.material = c.material.clone(); c.material.color.set(color(id)); }
+      c.userData.tip = tip;
+      hoverables.push(c);
+    });
     drones[id] = { m, drop };
   }
   for (const key in B.links) {
@@ -526,6 +544,10 @@ function update(force) {
     const tr = B.truth[id], lerp = a => a[i] + (a[j] - a[i]) * f;
     const x = lerp(tr.x), y = lerp(tr.y);
     drones[id].m.position.copy(toScene(x, y, lerp(tr.z)));
+    if (tr.h) {  // heading clockwise from north (shortest way round), pitch nose up, roll right side down
+      const hd = tr.h[i] + ((((tr.h[j] - tr.h[i]) % 360) + 540) % 360 - 180) * f, rad = Math.PI / 180;
+      drones[id].m.rotation.set(lerp(tr.p) * rad, -hd * rad, -lerp(tr.r) * rad, 'YXZ');
+    }
     drones[id].drop.geometry.setFromPoints([drones[id].m.position, toScene(x, y, groundH(x, y))]);
   }
   if (i === lastI && !force) return;
@@ -599,6 +621,8 @@ renderer.setAnimationLoop(now => {
   if (!B) return;
   if (playing) { t += dt * +$('#speed').value; if (t >= N - 1) { t = N - 1; $('#play').click(); } update(); }
   controls.update();
+  const px = 2 * Math.tan(camera.fov * Math.PI / 360) * DRONE_PX / innerHeight;
+  for (const id of objIds) drones[id].m.scale.setScalar(camera.position.distanceTo(drones[id].m.position) * px);
   renderer.render(scene, camera);
   for (const [el, obj] of labels) {
     v3.setFromMatrixPosition(obj.matrixWorld).project(camera);
