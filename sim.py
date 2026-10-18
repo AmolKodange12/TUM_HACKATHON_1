@@ -141,8 +141,64 @@ def cross_bearings(points, bearings_deg, sigmas_deg):
     return est, float(math.sqrt(np.trace(cov)))
 
 
-def run(scenario_path, out_dir):
-    sc = json.loads(Path(scenario_path).read_text())
+def make_scenario(area, n_rx, n_drones, seed):
+    """Random but presentable layout for an area from areas.json.
+
+    Receivers go on high ground (top 25% of the inner box), spread far apart. Drones fly
+    random loops inside the inner 80% of the box. Each receiver and drone has its own RNG
+    stream, so adding one never moves the others.
+    """
+    terrain = Terrain(fetch_dem(area["bbox"]), area["bbox"])
+    z, (ny, nx) = terrain.z, terrain.z.shape
+    r0, c0 = ny // 10, nx // 10
+    inner = z[r0:ny - r0, c0:nx - c0]
+    rows, cols = np.nonzero(inner >= np.percentile(inner, 75))
+    cand = np.stack([terrain.xw + (cols + c0 + 0.5) * terrain.dx, terrain.yn - (rows + r0 + 0.5) * terrain.dy], 1)
+
+    sensors, placed = [], []
+    for i in range(n_rx):
+        rng = np.random.default_rng([seed, 0, i])
+        pick = cand[rng.choice(len(cand), 200)]
+        if placed:  # farthest of 200 samples from the receivers already placed
+            pick = pick[[np.argmax(np.linalg.norm(pick[:, None] - np.array(placed)[None], axis=2).min(1))]]
+        placed.append(pick[0])
+        lat, lon = terrain.latlon(*pick[0])
+        sensors.append({"id": f"RF{i + 1}", "lat": round(float(lat), 5), "lon": round(float(lon), 5), "mast_m": 10,
+                        "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": 2.0,
+                        "bearing_bias_deg": round(float(rng.normal(0, 1)), 1)})
+
+    objects, xmax, ymax = [], -terrain.xw * 0.8, terrain.yn * 0.8
+    for i in range(n_drones):
+        rng = np.random.default_rng([seed, 1, i])
+        quad = rng.random() < 0.6
+        n = int(rng.integers(3, 6))
+        lat, lon = terrain.latlon(rng.uniform(-xmax, xmax, n), rng.uniform(-ymax, ymax, n))
+        objects.append({
+            "id": f"drone_{i + 1:02d}", "type": "quadcopter" if quad else "fixed-wing",
+            "freq_mhz": [2412.0, 2437.0, 2462.0][i % 3] if quad else [5745.0, 5785.0, 5825.0][i % 3],
+            "eirp_dbm": 27 if quad else 30, "bandwidth_mhz": 10 if quad else 20,
+            "alt_agl_m": int(rng.integers(60, 121)) if quad else int(rng.integers(200, 401)),
+            "speed_ms": 12 if quad else 28, "loop": True,
+            "waypoints": [[round(float(a), 5), round(float(b), 5)] for a, b in zip(lat, lon)],
+        })
+
+    return {"name": area["name"], "region": area["region"], "bbox": area["bbox"], "start_utc": "2026-11-03T14:00:00Z",
+            "duration_s": 1200, "dt_s": 1.0, "seed": seed, "shadowing_db": 4.0, "shadowing_tau_s": 15.0,
+            "sensors": sensors, "objects": objects}
+
+
+def terrain_json(terrain, max_cells):
+    """Downsampled DEM grid for the viewer, plus the frame to turn metres back into lat/lon."""
+    step = max(1, math.ceil(max(terrain.z.shape) / max_cells))
+    zs = terrain.z[::step, ::step]
+    return ({"nx": zs.shape[1], "ny": zs.shape[0], "x0": terrain.xw + terrain.dx * step / 2,
+             "y0": terrain.yn - terrain.dy * step / 2, "dx": terrain.dx * step, "dy": terrain.dy * step,
+             "z": [round(float(v)) for v in zs.ravel()]},
+            {"lat0": terrain.lat0, "lon0": terrain.lon0, "mx": terrain.mx, "my": terrain.my})
+
+
+def run(sc, out_dir):
+    """Simulate scenario dict sc into out_dir. Returns the viewer bundle."""
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     terrain = Terrain(fetch_dem(sc["bbox"]), sc["bbox"])
@@ -242,15 +298,12 @@ def run(scenario_path, out_dir):
     (out / "scenario.json").write_text(json.dumps(sc, indent=2))
 
     # Viewer bundle: downsampled terrain + every series in the local metre frame.
-    step = max(1, math.ceil(max(terrain.z.shape) / 256))
-    zs = terrain.z[::step, ::step]
     r1 = lambda a: [round(float(v), 1) for v in a]
+    tj, frame = terrain_json(terrain, 256)
     bundle = {
         "scenario": sc,
-        "frame": {"lat0": terrain.lat0, "lon0": terrain.lon0, "mx": terrain.mx, "my": terrain.my},
-        "terrain": {"nx": zs.shape[1], "ny": zs.shape[0], "x0": terrain.xw + terrain.dx * step / 2,
-                    "y0": terrain.yn - terrain.dy * step / 2, "dx": terrain.dx * step, "dy": terrain.dy * step,
-                    "z": [round(float(v)) for v in zs.ravel()]},
+        "frame": frame,
+        "terrain": tj,
         "t": [float(t) for t in ts],
         "sensors": [{"id": s["id"], "x": s["x"], "y": s["y"], "z": s["z"], "threshold_db": s["threshold_db"]} for s in sensors],
         "truth": {k: {"x": r1(v[0]), "y": r1(v[1]), "z": r1(v[2])} for k, v in truth.items()},
@@ -260,12 +313,13 @@ def run(scenario_path, out_dir):
         "fused": fused,
     }
     (out / "bundle.json").write_text(json.dumps(bundle, separators=(",", ":")))
-    return links, fused, ts
+    return bundle
 
 
 if __name__ == "__main__":
-    links, fused, ts = run(sys.argv[1] if len(sys.argv) > 1 else "scenario.json", sys.argv[2] if len(sys.argv) > 2 else "out")
-    for (sid, oid), L in links.items():
-        print(f"{sid} <- {oid}: detected {L['det'].mean():5.1%}  blocked by terrain {(L['diff'] > 10).mean():5.1%}")
-    for oid, f in fused.items():
+    sc = json.loads(Path(sys.argv[1] if len(sys.argv) > 1 else "scenario.json").read_text())
+    b = run(sc, sys.argv[2] if len(sys.argv) > 2 else "out")
+    for k, L in b["links"].items():
+        print(f"{k}: detected {np.mean(L['det']):5.1%}  blocked by terrain {np.mean(np.array(L['diff']) > 10):5.1%}")
+    for oid, f in b["fused"].items():
         print(f"{oid}: {len(f)} fixes")

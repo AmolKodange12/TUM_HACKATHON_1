@@ -8,25 +8,47 @@ A single LLM prompt can produce numbers that look correct. This engine computes 
 
 ```bash
 uv venv && uv pip install -r requirements.txt    # or: pip install -r requirements.txt
-.venv/bin/python sim.py                          # scenario.json -> out/
+.venv/bin/python serve.py                        # then open http://localhost:8765/viewer/
 .venv/bin/python test_sim.py                     # faithfulness checks
-python3 -m http.server 8765                      # then open http://localhost:8765/viewer/
+.venv/bin/python sim.py                          # optional: scenario.json -> out/, no viewer
 ```
 
-The first run downloads part of one Copernicus GLO-30 tile from public S3 (no key). The engine keeps it in `.cache/`.
+1. Choose one of the 4 areas.
+2. Set the number of receivers and drones. The engine runs again (in less than 1 s) and puts them at random positions.
+3. Click **New layout** to get a new seed and new positions.
 
-Direct link to one moment: `viewer/?t=450&ground=map&sel=RF2|drone_01`. The parameters are `t` (seconds), `ground` (`sat`, `map`, `elev`), `show` (`truth`, `sensed`, `both`) and `sel` (receiver|object).
+The first visit to an area downloads part of one Copernicus GLO-30 tile from public S3 (no key). The engine keeps it in `.cache/`.
+
+The URL always holds the current layout, so you can share it. Example: `viewer/?area=kaniv&rx=3&dr=2&seed=42&t=450&ground=map&sel=RF2|drone_01`. The parameters are:
+- `area`: the area id from `areas.json`
+- `rx`, `dr`: the number of receivers and drones
+- `seed`: the random seed
+- `t`: the time in seconds
+- `ground`: `sat`, `map` or `elev`
+- `show`: `truth`, `sensed` or `both`
+- `sel`: a receiver|object pair
 
 ## Files
 
 | File | What it does |
 |---|---|
-| `scenario.json` | Input: area, start time, duration, seed, receivers, drones and waypoints |
-| `sim.py` | Engine: DEM → truth → radio links → crossed bearings → outputs |
+| `areas.json` | The example areas. To add an area, add a line. The box must stay inside one 1° tile |
+| `scenario.json` | A hand-written example scenario for `sim.py` |
+| `sim.py` | Engine: random layout → DEM → truth → radio links → crossed bearings → outputs |
+| `serve.py` | Serves the viewer and runs the engine for each request |
 | `test_sim.py` | Checks that the physics behaves as it should |
 | `viewer/index.html` | 3D replay. One file, libraries come from a CDN, no build step |
 
-## Outputs (`out/`)
+## Random layout
+
+- Receivers go on high ground (the top 25% of the inner box). Each new receiver takes the position farthest from the receivers that are already placed.
+- Each drone gets a random type:
+  - quadcopter: 60–120 m above ground, 2.4 GHz
+  - fixed-wing: 200–400 m above ground, 5.8 GHz
+- Each drone flies a loop of 3–5 random waypoints.
+- Each receiver and drone has its own random stream from `(seed, kind, index)`. When you add a drone, the others do not move.
+
+## Outputs (`out/<area>/`)
 
 | File | Contents | Who sees it |
 |---|---|---|
@@ -59,6 +81,7 @@ When two or more receivers detect the same drone, a weighted least-squares cross
 - Bearing noise grows as the SNR drops.
 - Crossed bearings with no noise find the exact target.
 - The same seed gives byte-identical output files.
+- Adding a receiver or a drone does not move the others.
 
 ## Known limits
 
