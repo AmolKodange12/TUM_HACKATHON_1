@@ -50,6 +50,7 @@ Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), clic
 - **Hover** a drone, or its row in the Drones card, to highlight it: it glows, its path comes forward and the others dim. The tooltip gives its height, speed, heading and what the receivers make of it.
 - **Coverage heatmap:** for each drone radio, the chance that a drone at a point would be located (two or more receivers), heard (one or more), or the expected position error. Show one height above ground as a sheet, or all heights at once as a 3D cloud. Darker blue means more certain.
 - Propellers spin while the replay plays.
+- **Scenario settings** (under the receiver and drone counts): round length, drone mix (balanced, mostly quadcopters, mostly fixed-wing, attack wave), receiver mast height, bearing accuracy, shadowing and wind. Each change runs the engine again; values that differ from the defaults go into the URL (`duration_s`, `mix`, `mast_m`, `bearing_sigma_deg`, `shadowing_db`, `wind_from_deg`, `wind_mps`). `POST /api/run` takes them as `settings`.
 
 ## Simple view: Sky Spotters (`cute/`)
 
@@ -157,6 +158,7 @@ When two or more receivers detect the same drone, a weighted least-squares cross
 - A fixed-wing holds an orbit in a 15 m/s wind without passing its bank limit, and its speed over the ground swings by the wind.
 - The same seed gives byte-identical output files.
 - Adding a receiver or a drone does not move the others.
+- Layout settings reach the scenario, are clamped to safe ranges, and the defaults change nothing.
 
 ## Known limits
 
