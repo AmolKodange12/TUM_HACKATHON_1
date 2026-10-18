@@ -8,6 +8,7 @@
   "seed": 42,
   "shadowing_db": 4.0,
   "shadowing_tau_s": 15.0,
+  "visibility_km": 10.0,
   "sensors": [
     {"id": "RF1", "lat": 49.700, "lon": 31.500, "mast_m": 10, "gain_dbi": 6, "noise_figure_db": 6,
      "threshold_db": 6, "bearing_sigma_deg": 2.0, "bearing_bias_deg": 0.8},
@@ -16,9 +17,30 @@
     {"id": "RF3", "lat": 49.775, "lon": 31.530, "mast_m": 15, "gain_dbi": 6, "noise_figure_db": 7,
      "threshold_db": 6, "bearing_sigma_deg": 3.0, "bearing_bias_deg": 0.4}
   ],
+  "radars": [
+    {"id": "RADAR1", "lat": 49.735, "lon": 31.500, "mast_m": 8, "tx_power_dbm": 45, "gain_dbi": 30,
+     "freq_mhz": 9500, "bandwidth_mhz": 5, "integration_gain_db": 25, "noise_figure_db": 4, "threshold_db": 13,
+     "bearing_sigma_deg": 1.0, "bearing_bias_deg": 0.0, "range_sigma_m": 15, "radial_sigma_mps": 1.0}
+  ],
+  "cameras": [
+    {"id": "EO1", "band": "visible", "lat": 49.745, "lon": 31.480, "mast_m": 6, "hfov_deg": 6, "pixels": 1920,
+     "px_detect": 3, "px_recognise": 8, "target_contrast": 0.3, "contrast_threshold": 0.02, "threshold_db": 0,
+     "bearing_sigma_deg": 0.1, "bearing_bias_deg": 0.0},
+    {"id": "IR1", "band": "thermal", "lat": 49.760, "lon": 31.505, "mast_m": 6, "hfov_deg": 6, "pixels": 640,
+     "px_detect": 3, "px_recognise": 8, "netd_k": 0.05, "snr_required": 5, "extinction_per_km": 0.2, "threshold_db": 0,
+     "bearing_sigma_deg": 0.15, "bearing_bias_deg": 0.0}
+  ],
+  "acoustic_arrays": [
+    {"id": "AC1", "lat": 49.772, "lon": 31.458, "mast_m": 2, "mics": 6, "freq_hz": 500, "ambient_db": 40,
+     "processing_gain_db": 10, "absorption_db_per_km": 5, "threshold_db": 6, "bearing_sigma_deg": 3.0, "bearing_bias_deg": 0.0}
+  ],
+  "remote_id_receivers": [
+    {"id": "RID1", "lat": 49.725, "lon": 31.465, "mast_m": 3, "freq_mhz": 2437, "gain_dbi": 2, "noise_figure_db": 6,
+     "bandwidth_mhz": 20, "threshold_db": 4}
+  ],
   "objects": [
     {"id": "drone_01", "type": "quadcopter", "freq_mhz": 2437.5, "eirp_dbm": 27, "bandwidth_mhz": 10,
-     "alt_agl_m": 60, "speed_ms": 12,
+     "alt_agl_m": 60, "speed_ms": 12, "remote_id": true,
      "waypoints": [[49.790, 31.440], [49.760, 31.470], [49.735, 31.470], [49.715, 31.455], [49.690, 31.480]]},
     {"id": "drone_02", "type": "fixed_wing_recon", "freq_mhz": 5800.0, "eirp_dbm": 30, "bandwidth_mhz": 20,
      "alt_agl_m": 250, "speed_ms": 28, "loop": true,

@@ -1,0 +1,72 @@
+{
+  "rf_receiver": {
+    "name": "RF antenna array",
+    "model": "rf_receiver.glb",
+    "description": "Generic illustrative prop; dimensions are artistic, not equipment specifications.",
+    "bounds_m": {
+      "width": 0.965,
+      "depth": 1.083,
+      "height": 2.035
+    }
+  },
+  "radar": {
+    "name": "Radar panel",
+    "model": "radar.glb",
+    "description": "Generic illustrative prop; dimensions are artistic, not equipment specifications.",
+    "bounds_m": {
+      "width": 1.035,
+      "depth": 1.083,
+      "height": 2.25
+    }
+  },
+  "eo_camera": {
+    "name": "Visible-light camera",
+    "model": "eo_camera.glb",
+    "description": "Generic illustrative prop; dimensions are artistic, not equipment specifications.",
+    "bounds_m": {
+      "width": 0.965,
+      "depth": 1.083,
+      "height": 1.943
+    }
+  },
+  "thermal_camera": {
+    "name": "Thermal camera",
+    "model": "thermal_camera.glb",
+    "description": "Generic illustrative prop; dimensions are artistic, not equipment specifications.",
+    "bounds_m": {
+      "width": 0.965,
+      "depth": 1.083,
+      "height": 1.9
+    }
+  },
+  "acoustic_array": {
+    "name": "Microphone array",
+    "model": "acoustic_array.glb",
+    "description": "Generic illustrative prop; dimensions are artistic, not equipment specifications.",
+    "bounds_m": {
+      "width": 1.02,
+      "depth": 1.083,
+      "height": 2.178
+    }
+  },
+  "remote_id": {
+    "name": "Remote ID receiver",
+    "model": "remote_id.glb",
+    "description": "Generic illustrative prop; dimensions are artistic, not equipment specifications.",
+    "bounds_m": {
+      "width": 0.965,
+      "depth": 1.083,
+      "height": 1.995
+    }
+  },
+  "adsb_receiver": {
+    "name": "ADS-B receiver",
+    "model": "adsb_receiver.glb",
+    "description": "Generic illustrative prop; dimensions are artistic, not equipment specifications.",
+    "bounds_m": {
+      "width": 0.965,
+      "depth": 1.083,
+      "height": 2.335
+    }
+  }
+}

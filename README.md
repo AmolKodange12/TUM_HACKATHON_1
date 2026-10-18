@@ -1,8 +1,8 @@
 # Mirror World
 
-A synthetic scenario generator for aerial objects over real terrain in Ukraine. You give it a scenario file. It gives back the truth (where each drone was) and the data that each radio receiver recorded, on one shared clock.
+A synthetic scenario generator for aerial objects over real terrain in Ukraine. You give it a scenario file. It gives back the truth (where each drone was) and the data that each sensor recorded (radio receivers, radar, daylight and thermal cameras, microphone arrays, Remote ID), on one shared clock.
 
-A single LLM prompt can produce numbers that look correct. This engine computes every value from the terrain and the radio physics, so you can explain every record. Click a receiver row in the viewer to see the full loss breakdown for that moment.
+A single LLM prompt can produce numbers that look correct. This engine computes every value from the terrain and the physics of each sensor, so you can explain every record. Click a sensor row in the viewer to see the full breakdown for that moment.
 
 The drones fly a kinematic flight model with each type's real limits (speed, acceleration, climb, tilt or bank), so they brake, lean and bank through turns. The viewer shows each one as a 3D model with that attitude.
 
@@ -34,7 +34,7 @@ The URL always holds the current layout, so you can share it. Example: `viewer/?
 - `t`: the time in seconds
 - `ground`: `sat`, `map` or `elev`
 - `show`: `truth`, `sensed` or `both`
-- `sel`: a receiver|object pair
+- `sel`: a sensor|object pair
 - `heat`: open the coverage heatmap with `located`, `heard` or `err`
 - `play=1`: start playing
 
@@ -46,9 +46,10 @@ Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), clic
 
 ## Pro view (`viewer/`)
 
-- **Layers:** the path as the whole flight, flown so far, or the last minute; coloured by drone or by certainty (located by two or more receivers, heard by one only, unseen); an error band as wide as each fix's position error (up to 500 m each side, fading as the error grows); toggles for labels, height lines, bearings, fix circles and receivers; drone size.
-- **Hover** a drone, or its row in the Drones card, to highlight it: it glows, its path comes forward and the others dim. The tooltip gives its height, speed, heading and what the receivers make of it.
-- **Coverage heatmap:** for each drone radio, the chance that a drone at a point would be located (two or more receivers), heard (one or more), or the expected position error. Show one height above ground as a sheet, or all heights at once as a 3D cloud. Darker blue means more certain.
+- **Sensors** are drawn as 3D models of their type (`models/sensors/`). Each has a card with its signal over time, and a click on a drone row opens the full breakdown for that moment.
+- **Layers:** the path as the whole flight, flown so far, or the last minute; coloured by drone or by certainty (located, detected by one sensor only, unseen); an error band as wide as each fix's position error (up to 500 m each side, fading as the error grows); toggles for labels, height lines, bearings, fix circles and sensors; drone size.
+- **Hover** a drone, or its row in the Drones card, to highlight it: it glows, its path comes forward and the others dim. The tooltip gives its height, speed, heading and what the sensors make of it.
+- **Coverage heatmap:** for each drone radio, the chance that a drone at a point would be located (two or more radio receivers), heard (one or more), or the expected position error. It covers the radio receivers only. Show one height above ground as a sheet, or all heights at once as a 3D cloud. Darker blue means more certain.
 - Propellers spin while the replay plays.
 - **Scenario settings** (under the receiver and drone counts): round length, drone mix (balanced, mostly quadcopters, mostly fixed-wing, attack wave), receiver mast height, bearing accuracy, shadowing and wind. Each change runs the engine again; values that differ from the defaults go into the URL (`duration_s`, `mix`, `mast_m`, `bearing_sigma_deg`, `shadowing_db`, `wind_from_deg`, `wind_mps`). `POST /api/run` takes them as `settings`.
 
@@ -61,18 +62,20 @@ A small game on the same engine. The goal is **network confidence**: each statio
 - **Score:** per station and second with a bird in the air, the mean over those birds of (SNR − threshold) / 20 dB, clamped to 0–1, where a bird the station cannot hear counts 0; averaged over the round, then over the stations. Stars at 90 %, 110 % and 130 % of **par**: the starting layout's score against the same birds, so every area and round is fair.
 - **Try again, same birds** to improve the placement; **New birds** for a new round. A first fix of a bird pops "Located!".
 - Soft procedural music and a wing hum while birds fly; the speaker button mutes it (remembered).
+- The stations are radio receivers only. Game rounds do not use the radar, cameras, microphones or Remote ID.
 
 ## Files
 
 | File | What it does |
 |---|---|
 | `areas.json` | The example areas. To add an area, add a line. The box must stay inside one 1° tile |
-| `scenario.json` | A hand-written example scenario for `sim.py` |
-| `sim.py` | Engine: random layout or game round → DEM → truth → radio links → crossed bearings → coverage → outputs |
+| `scenario.json` | A hand-written example scenario for `sim.py`, with one sensor of each type |
+| `sim.py` | Engine: random layout or game round → DEM → truth → sensor links → fixes → coverage → outputs |
 | `serve.py` | Serves the pages and runs the engine for each request: layouts, game rounds, planner scenarios |
 | `flight.py` | Flight model: drone type + flight plan → 10 Hz track with heading, pitch and roll |
-| `drones.json` | Drone types: size, mass, endurance, flight limits, 3D model |
+| `drones.json` | Drone types: size, mass, endurance, flight limits, radar, heat and sound signature, 3D model |
 | `models/` | One GLB model per drone type, plus the Blender scripts that build and render them |
+| `models/sensors/` | One GLB model per sensor type, built by `models/build_sensors.py` (standard library only) |
 | `planner/index.html` | Scenario planner on a map. One file, Leaflet from a CDN |
 | `cute/index.html` | Simple view, *Sky Spotters*: place stations, catch birds. Same engine and data |
 | `test_sim.py` | Checks that the physics behaves as it should |
@@ -84,8 +87,9 @@ A small game on the same engine. The goal is **network confidence**: each statio
 - Each drone gets a random type from `drones.json`:
   - `quadcopter` (50%): 60–120 m above ground, 2.4 GHz
   - `fixed_wing_recon` (25%), `delta_wing` (15%), `decoy` (10%): 200–400 m above ground, 5.8 GHz
-- Each drone flies a loop of 3–5 random waypoints at the cruise speed of its type.
-- Each receiver and drone has its own random stream from `(seed, kind, index)`. When you add a drone, the others do not move.
+- Each drone flies a loop of 3–5 random waypoints at the cruise speed of its type. Quadcopters broadcast Remote ID; the others do not.
+- Each layout also gets one radar, one daylight camera and one thermal camera on high ground, and one microphone array and one Remote ID receiver anywhere in the inner box.
+- Each sensor and drone has its own random stream from `(seed, kind, index)`. When you add a receiver or a drone, nothing else moves.
 
 ## Drones
 
@@ -131,9 +135,17 @@ blender -b -P models/render.py -- models/delta_wing.glb frame.png --heading 250 
 |---|---|---|
 | `truth.csv` | Position, altitude, speed, heading, pitch and roll of each object, every second | Answer key |
 | `rf_raw.csv` | What each receiver reports: power, SNR, bearing. Detections only | Sensor data |
-| `fused.cot.xml` | Positions from crossed bearings, as TAK Cursor on Target events | Sensor data |
-| `fused.csv` | The same fixes, with `source_object_id` and the error against the truth | Answer key |
 | `rf_budget.csv` | Full link budget for every receiver, object and second, detected or not | Explanation |
+| `radar_raw.csv` | What the radar reports: range, bearing, radial velocity, SNR. Detections only | Sensor data |
+| `radar_budget.csv` | Full two-way link budget for every radar, object and second, detected or not | Explanation |
+| `camera_raw.csv` | What each camera reports: azimuth, elevation, class and confidence. Detections only | Sensor data |
+| `camera_budget.csv` | Line of sight, pixels on target, contrast or heat left, margin, sun elevation, every second | Explanation |
+| `acoustic_raw.csv` | What each microphone array reports: sound level, SNR, bearing. Detections only | Sensor data |
+| `acoustic_budget.csv` | Sound travel time, spreading, absorption, terrain, noise and SNR, every second | Explanation |
+| `remote_id_raw.csv` | Decoded Remote ID messages: ID, reported position, altitude, speed, operator position | Sensor data |
+| `remote_id_budget.csv` | Link budget of the Remote ID broadcast, every second | Explanation |
+| `fused.cot.xml` | Positions from crossed bearings, a radar's range + bearing, or a Remote ID message, as TAK Cursor on Target events | Sensor data |
+| `fused.csv` | The same fixes, with `source_object_id`, `method` and the error against the truth | Answer key |
 | `bundle.json` | Everything the viewer needs, including the coverage grids | Viewer |
 
 Every sensor record has a `source_object_id` column. All files use the same UTC clock.
@@ -151,7 +163,51 @@ For each receiver, each drone and each second:
 
 When two or more receivers detect the same drone, a weighted least-squares crossing gives a position. `ce` comes from the covariance of that solution.
 
-**Coverage** uses the same physics on a grid (40 cells across, at 50, 100, 250, 500 and 1,000 m above ground by default; set `"coverage": {"grid": 40, "alts_agl_m": [...]}` in the scenario). For each receiver it computes the mean SNR, then the chance of detection given the log-normal shadowing: Φ((SNR − threshold) / σ). Heard = at least one receiver detects, located = at least two. The expected error is `ce` of a crossing by every receiver that probably hears the point. Each distinct drone radio gets its own grids.
+**Coverage** uses the same physics on a grid (40 cells across, at 50, 100, 250, 500 and 1,000 m above ground by default; set `"coverage": {"grid": 40, "alts_agl_m": [...]}` in the scenario). For each radio receiver it computes the mean SNR, then the chance of detection given the log-normal shadowing: Φ((SNR − threshold) / σ). Heard = at least one receiver detects, located = at least two. The expected error is `ce` of a crossing by every receiver that probably hears the point. Each distinct drone radio gets its own grids. The other sensor types are not in the coverage grids yet.
+
+## Radar model
+
+A radar is active: it transmits on its own frequency and hears its own echo, so it detects a drone whether or not that
+drone is transmitting. For each radar, each drone and each second:
+
+1. Run the same terrain-and-diffraction path loss as the radio model, once, since the radar sits at both ends of the link.
+2. Double it (the signal crosses that path twice, out and back) and add the target's reflected aperture, from its
+   radar cross-section (`rcs_dbsm` in `drones.json`) and the radar's wavelength.
+3. Add the gain from integrating many pulses over a dwell (`integration_gain_db`) — a single pulse at this power would
+   rarely detect anything.
+4. Received power = transmit power + antenna gain (×2, the same antenna sends and listens) − losses + RCS gain +
+   integration gain. SNR = power − noise floor. Detected if SNR ≥ threshold.
+5. Bearing = true bearing + fixed bias + noise, same as a receiver. Range and radial velocity (Doppler) get their own
+   noise, also growing as the SNR drops.
+
+One radar already gives a full fix (range + bearing), no crossing with a second sensor needed.
+
+## Camera model
+
+Daylight (`"band": "visible"`) and thermal (`"band": "thermal"`) cameras on a pan-tilt head. For each camera, drone and second:
+
+1. Sample the terrain under the sight line. If the terrain rises above it, the drone is hidden.
+2. Pixels on the drone = its largest dimension / (range × the angle of one pixel). Below one pixel, the drone is smeared and its signal drops with the square of the fraction it covers.
+3. Daylight: the contrast left after the air is `target_contrast × e^(−3.912 × range / visibility)` (Koschmieder). It needs the sun above −6° (civil twilight); the engine computes the sun's elevation for the area and time.
+4. Thermal: the temperature difference left is `thermal_dt_k` (in `drones.json`) × `e^(−extinction × range)`. It needs `snr_required × netd_k`. It works day and night.
+5. Margin = the smaller of 20 log(pixels / `px_detect`) and 20 log(signal / signal needed), minus a slowly drifting atmospheric shimmer. Detected if the margin ≥ threshold and the sight line is clear.
+6. It reports azimuth and elevation (precise: 0.1–0.15°) and a class (multirotor or fixed wing). The confidence comes from the Johnson curve with `px_recognise` pixels at 50%.
+
+## Acoustic model
+
+A microphone array hears engines and propellers (`spl_1m_db` in `drones.json`). Sound needs range / 343 s to arrive, so the array hears the drone where it was then. The bearing points there, a few hundred metres behind a fast drone.
+
+Level = sound at 1 m − 20 log(range) − air absorption − terrain diffraction (the same knife-edge maths as radio, with the sound's wavelength) − turbulence. SNR = level + array and processing gain − background noise (ambient plus wind on the microphones). Bearing noise grows as the SNR drops.
+
+## Remote ID model
+
+A cooperative drone (`"remote_id": true`) broadcasts its own position, altitude, speed and operator position once a second. The link uses the radio model at 2.4 GHz with a 14 dBm broadcast. When the receiver decodes it, the reported position (with a few metres of drifting GNSS error) is a fix on its own.
+
+## Fusion
+
+Every sensor that measures a bearing (radio receivers, cameras, microphone arrays) joins the same weighted crossing, so cameras and microphones can locate a drone that does not transmit. A radar detection or a Remote ID message is a fix by itself. The viewer shows one fix per drone per second: Remote ID first, then radar, then the crossing.
+
+A drone that appears later (`start_s`) or leaves the area (`leave`) is detected by no sensor while it is away.
 
 ## Checks (`test_sim.py`)
 
@@ -159,11 +215,19 @@ When two or more receivers detect the same drone, a weighted least-squares cross
 - A 150 m ridge between the receiver and the drone adds more than 15 dB of loss.
 - Bearing noise grows as the SNR drops.
 - Crossed bearings with no noise find the exact target.
-- Coverage falls with distance from a receiver; one receiver can hear but never locate; two receivers can.
+- Radar echo power falls with distance; a closing target has negative radial velocity, a receding one positive.
+- A radar range+bearing fix with no noise finds the exact target.
+- A ridge hides a drone from a camera that sees it over flat ground.
+- A camera gets fewer pixels on a drone further away, and the recognition confidence rises with pixels (50% at `px_recognise`).
+- The sun is up at local noon and down at midnight, at the right elevation.
+- A microphone array points to where a fast drone was when the sound left it, not to where it is.
 - A quadcopter keeps to its speed, acceleration and tilt limits, and lands where it took off.
 - A fixed-wing holds an orbit in a 15 m/s wind without passing its bank limit, and its speed over the ground swings by the wind.
 - The same seed gives byte-identical output files.
-- Adding a receiver or a drone does not move the others.
+- Adding a receiver or a drone does not move the others, including the radar, cameras, microphones and Remote ID receiver.
+- Only quadcopters broadcast Remote ID in a random layout.
+- No sensor of any type detects a drone before it appears; a game bird is heard only while it is in the area.
+- Coverage falls with distance from a receiver; one receiver can hear but never locate; two receivers can.
 - Layout settings reach the scenario, are clamped to safe ranges, and the defaults change nothing.
 
 ## Known limits
@@ -175,6 +239,15 @@ Each limit has a `ponytail:` comment in `sim.py` that tells where to extend the 
 - The fusion step uses `source_object_id` to group detections. A real system must group them by frequency and time.
 - The area must stay inside one 1° DEM tile. The local metre frame is flat (good to about 15 km).
 - Drones follow the ground at a fixed height above it. They do not climb over ridges.
+- Radar RCS is one fixed number per drone class; a real target's RCS swings with aspect angle. Radial velocity uses
+  horizontal ground velocity only (no climb/descent component).
+- Heat (`thermal_dt_k`) and sound (`spl_1m_db`) are also one number per class, the same from every side.
+- Cameras are always pointed at the drone (as if cued by the radar); there is no search pattern or slew time.
+  The camera sight line uses the radio earth bulge (k = 4/3).
+- Sound is not bent by wind or temperature layers; wind only adds noise at the microphones.
+- Remote ID uses the open-terrain radio model, so its range in clear line of sight (a few km) is longer than the
+  ~1 km often seen near the ground with clutter.
+- Not modelled: ADS-B (it needs manned aircraft, which the scenarios do not have), TDOA, satellite imagery and observer reports.
 - The wind is the same at every height.
 - Coverage ignores receiver bias and the fusion's 10° minimum crossing angle, so it is slightly optimistic where bearings cross shallowly.
 - When a plan ends early, a fixed-wing circles its last waypoint and may leave the area; the terrain is clamped at the edge there.
@@ -185,11 +258,13 @@ These do not change the structure. `scenario.json` is the input and `out/` is th
 
 - Deygout diffraction and ESA WorldCover clutter
 - Duty cycle, interference between drones, a jammer
-- Remote ID as a second sensor type
+- TDOA multilateration from time-synchronised RF receivers
+- Manned aircraft as an object type, and ADS-B receivers (`models/sensors/adsb_receiver.glb` is ready)
+- Sensor type toggles in the viewer
 - Error ellipse from the fix covariance
 - Terrain profile chart in the "why" card
 - LLM prompt → `scenario.json`
-- Camera and satellite sensors (`models/render.py` already renders a drone at a given range and attitude)
+- Satellite imagery and observer reports (`models/render.py` already renders a drone at a given range and attitude)
 
 ## Data credits
 
