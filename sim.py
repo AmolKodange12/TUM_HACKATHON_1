@@ -11,6 +11,8 @@ from pathlib import Path
 
 import numpy as np
 
+import flight
+
 C = 299_792_458.0
 K_EARTH_R = 4 / 3 * 6_371_000  # effective earth radius, standard refraction
 CACHE = Path(__file__).parent / ".cache"
@@ -67,20 +69,36 @@ class Terrain:
         return top * (1 - fr) + bot * fr
 
 
-def track(terrain, obj, ts):
-    """Truth path: constant speed along the waypoints, fixed height above ground."""
-    pts = np.array([terrain.xy(lat, lon) for lat, lon in obj["waypoints"]])
-    if obj.get("loop"):
-        pts = np.vstack([pts, pts[:1]])
-    seg = np.diff(pts, axis=0)
-    cum = np.concatenate([[0], np.cumsum(np.hypot(seg[:, 0], seg[:, 1]))])
-    s = obj["speed_ms"] * ts
-    s = s % cum[-1] if obj.get("loop") else np.minimum(s, cum[-1])
-    # ponytail: straight segments with sharp turns; spline the waypoints if turns look wrong
-    x, y = np.interp(s, cum, pts[:, 0]), np.interp(s, cum, pts[:, 1])
-    i = np.clip(np.searchsorted(cum, s, "right") - 1, 0, len(seg) - 1)
-    heading = np.degrees(np.arctan2(seg[i, 0], seg[i, 1])) % 360
-    return x, y, terrain.h(x, y) + obj["alt_agl_m"], heading
+def track(terrain, obj, ts, drone, wind=np.zeros(2)):
+    """Truth path from the flight model (flight.py), at the object's height above the ground.
+
+    The drone starts at waypoints[0] at alt_agl_m and speed_ms, then flies `plan` if given,
+    else a goto through each further waypoint (repeated if `loop`). When the plan ends early,
+    a multirotor hovers and a fixed-wing circles its last point.
+    Returns x, y, z (m MSL), heading, pitch, roll, height above ground and ground speed.
+    """
+    (lat0, lon0), rest, speed = obj["waypoints"][0], obj["waypoints"][1:], obj["speed_ms"]
+    plan = obj.get("plan")
+    if plan is None:
+        pts = rest + [[lat0, lon0]] if obj.get("loop") else rest
+        if obj.get("loop"):
+            xy = np.array([terrain.xy(*p) for p in [[lat0, lon0], *pts]])
+            lap = np.hypot(*np.diff(xy, axis=0).T).sum()
+            pts = pts * (math.ceil(ts[-1] * speed / lap) + 1)
+        plan = [{"goto": {"lat": la, "lon": lo}} for la, lo in pts]
+    plan = [{k: {"speed_mps": speed, **(a or {})}} for leg in plan for k, a in leg.items()]
+    end = plan[-1][next(iter(plan[-1]))] if plan else {"lat": lat0, "lon": lon0}
+    if drone["type"] == "multirotor":
+        plan.append({"hover": {"duration_s": ts[-1] + 1}})
+    else:
+        plan.append({"orbit": {"lat": end.get("lat", lat0), "lon": end.get("lon", lon0), "duration_s": ts[-1] + 1,
+                               "radius_m": round(2 * flight.min_orbit_radius(drone, wind)), "speed_mps": speed}})
+    start = {"lat": lat0, "lon": lon0, "alt_m": obj["alt_agl_m"], "speed_mps": speed}
+    rows = flight.fly(drone, {"id": obj["id"], "start": start, "plan": plan}, terrain.xy, wind, t_end=ts[-1])
+    r = rows[np.minimum(np.rint(ts / flight.DT).astype(int), len(rows) - 1)]
+    x, y, agl = r[:, 2], r[:, 3], r[:, 4]
+    # ponytail: terrain following at a fixed height above ground; no climbs over ridges or minimum MSL
+    return x, y, terrain.h(x, y) + agl, r[:, 9], r[:, 10], r[:, 11], agl, np.hypot(r[:, 5], r[:, 6])
 
 
 def path_loss(terrain, rx, tx, freq_mhz, n=64):
@@ -150,16 +168,24 @@ def run(scenario_path, out_dir):
     ts = np.arange(0, sc["duration_s"], dt)
     start = datetime.fromisoformat(sc["start_utc"].replace("Z", "+00:00"))
     iso = lambda t: (start + timedelta(seconds=float(t))).strftime("%Y-%m-%dT%H:%M:%SZ")
+    drones = json.loads((Path(__file__).parent / "drones.json").read_text())
+    wind = flight.wind_xy(sc.get("wind"))
+    for o in sc["objects"]:
+        if o["type"] not in drones or o["type"].startswith("_"):
+            raise ValueError(f"{o['id']}: unknown type {o['type']!r}, use one of "
+                             f"{', '.join(k for k in drones if not k.startswith('_'))} (drones.json)")
 
     truth = {}
     with open(out / "truth.csv", "w", newline="") as fh:
         wr = csv.writer(fh)
-        wr.writerow(["time_utc", "t_s", "object_id", "lat", "lon", "alt_msl_m", "alt_agl_m", "heading_deg", "speed_ms"])
+        wr.writerow(["time_utc", "t_s", "object_id", "lat", "lon", "alt_msl_m", "alt_agl_m", "heading_deg",
+                     "pitch_deg", "roll_deg", "speed_ms"])
         for o in sc["objects"]:
-            x, y, z, hd = truth[o["id"]] = track(terrain, o, ts)
+            x, y, z, hd, pitch, roll, agl, speed = truth[o["id"]] = track(terrain, o, ts, drones[o["type"]], wind)
             lat, lon = terrain.latlon(x, y)
             for i, t in enumerate(ts):
-                wr.writerow([iso(t), t, o["id"], f"{lat[i]:.6f}", f"{lon[i]:.6f}", f"{z[i]:.1f}", o["alt_agl_m"], f"{hd[i]:.1f}", o["speed_ms"]])
+                wr.writerow([iso(t), t, o["id"], f"{lat[i]:.6f}", f"{lon[i]:.6f}", f"{z[i]:.1f}", f"{agl[i]:.1f}",
+                             f"{hd[i]:.1f}", f"{pitch[i]:.1f}", f"{roll[i]:.1f}", f"{speed[i]:.1f}"])
 
     sensors, links = [], {}
     for si, s in enumerate(sc["sensors"]):
@@ -169,7 +195,7 @@ def run(scenario_path, out_dir):
         noise_dbm = -174 + 60 + s["noise_figure_db"]  # +60 = 10*log10(1 MHz), scaled per emitter below
         for oi, o in enumerate(sc["objects"]):
             rng = np.random.default_rng([sc["seed"], si, oi])
-            x, y, z, _ = truth[o["id"]]
+            x, y, z = truth[o["id"]][:3]
             tx = np.stack([x, y, z], 1)
             d3, fspl, diff, v = path_loss(terrain, rx, tx, o["freq_mhz"])
             shadow = shadowing(rng, len(ts), sc["shadowing_db"], sc["shadowing_tau_s"], dt)
@@ -253,7 +279,9 @@ def run(scenario_path, out_dir):
                     "z": [round(float(v)) for v in zs.ravel()]},
         "t": [float(t) for t in ts],
         "sensors": [{"id": s["id"], "x": s["x"], "y": s["y"], "z": s["z"], "threshold_db": s["threshold_db"]} for s in sensors],
-        "truth": {k: {"x": r1(v[0]), "y": r1(v[1]), "z": r1(v[2])} for k, v in truth.items()},
+        "truth": {k: {"x": r1(v[0]), "y": r1(v[1]), "z": r1(v[2]), "h": r1(v[3]), "p": r1(v[4]), "r": r1(v[5])}
+                  for k, v in truth.items()},
+        "drones": {o["id"]: {"name": drones[o["type"]]["name"], "model": drones[o["type"]]["model"]} for o in sc["objects"]},
         "links": {f"{sid}|{oid}": {k: (r1(L[k]) if k != "det" else [int(b) for b in L[k]])
                                    for k in ("power", "snr", "det", "bearing", "sigma", "dist", "fspl", "diff", "shadow")}
                   | {"noise": round(L["noise"], 1)} for (sid, oid), L in links.items()},

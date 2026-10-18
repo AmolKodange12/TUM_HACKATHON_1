@@ -1,0 +1,78 @@
+{
+  "_note": "Rounded public figures for each class, not the spec sheet of one airframe. m, kg, s, m/s, deg. multirotor: max_tilt_deg sets drag, it reaches max_speed_mps at full tilt. fixed_wing: turns by banking (radius = v^2 / (g tan bank)) and holds airspeed.",
+  "quadcopter": {
+    "name": "Camera quadcopter (DJI Mavic 3 class)",
+    "type": "multirotor",
+    "model": "models/quadcopter.glb",
+    "size_m": {"length": 0.35, "width": 0.28, "height": 0.11},
+    "mass_kg": 0.9,
+    "endurance_s": 2400,
+    "note": "arms unfolded, without propellers; max speed is sport mode (normal 15 m/s); spec endurance 46 min, ~40 in cold weather",
+    "flight": {
+      "cruise_speed_mps": 12,
+      "max_speed_mps": 21,
+      "max_accel_mps2": 5,
+      "max_climb_mps": 8,
+      "max_descent_mps": 6,
+      "max_tilt_deg": 35,
+      "max_yaw_rate_dps": 200
+    }
+  },
+  "fixed_wing_recon": {
+    "name": "Fixed-wing recon drone (Orlan-10 class)",
+    "type": "fixed_wing",
+    "model": "models/fixed_wing_recon.glb",
+    "size_m": {"length": 1.8, "span": 3.1, "height": 0.5},
+    "mass_kg": 18,
+    "endurance_s": 36000,
+    "note": "claimed endurance up to 16 h; 10 h is a safer figure",
+    "flight": {
+      "cruise_speed_mps": 30,
+      "min_speed_mps": 20,
+      "max_speed_mps": 42,
+      "max_accel_mps2": 1.5,
+      "max_climb_mps": 4,
+      "max_descent_mps": 5,
+      "max_bank_deg": 30,
+      "roll_rate_dps": 45
+    }
+  },
+  "delta_wing": {
+    "name": "One-way attack drone (Shahed-136 / Geran-2 class)",
+    "type": "fixed_wing",
+    "model": "models/delta_wing.glb",
+    "size_m": {"length": 3.5, "span": 2.5, "height": 0.6},
+    "mass_kg": 200,
+    "endurance_s": 43200,
+    "note": "range ~2,000 km at cruise speed",
+    "flight": {
+      "cruise_speed_mps": 51,
+      "min_speed_mps": 35,
+      "max_speed_mps": 56,
+      "max_accel_mps2": 1.0,
+      "max_climb_mps": 5,
+      "max_descent_mps": 8,
+      "max_bank_deg": 30,
+      "roll_rate_dps": 30
+    }
+  },
+  "decoy": {
+    "name": "Decoy drone (Gerbera class)",
+    "type": "fixed_wing",
+    "model": "models/decoy.glb",
+    "size_m": {"length": 2.2, "span": 2.4, "height": 0.4},
+    "mass_kg": 18,
+    "endurance_s": 21600,
+    "note": "size, mass and speed are rough: public reports vary and the type keeps changing",
+    "flight": {
+      "cruise_speed_mps": 42,
+      "min_speed_mps": 28,
+      "max_speed_mps": 47,
+      "max_accel_mps2": 1.2,
+      "max_climb_mps": 4,
+      "max_descent_mps": 6,
+      "max_bank_deg": 30,
+      "roll_rate_dps": 35
+    }
+  }
+}

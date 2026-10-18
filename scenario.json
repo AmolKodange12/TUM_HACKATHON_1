@@ -20,7 +20,7 @@
     {"id": "drone_01", "type": "quadcopter", "freq_mhz": 2437.5, "eirp_dbm": 27, "bandwidth_mhz": 10,
      "alt_agl_m": 60, "speed_ms": 12,
      "waypoints": [[49.790, 31.440], [49.760, 31.470], [49.735, 31.470], [49.715, 31.455], [49.690, 31.480]]},
-    {"id": "drone_02", "type": "fixed-wing", "freq_mhz": 5800.0, "eirp_dbm": 30, "bandwidth_mhz": 20,
+    {"id": "drone_02", "type": "fixed_wing_recon", "freq_mhz": 5800.0, "eirp_dbm": 30, "bandwidth_mhz": 20,
      "alt_agl_m": 250, "speed_ms": 28, "loop": true,
      "waypoints": [[49.780, 31.420], [49.785, 31.540], [49.700, 31.545], [49.695, 31.430]]}
   ]
