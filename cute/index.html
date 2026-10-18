@@ -21,153 +21,173 @@
   canvas { display: block; touch-action: none; outline: none; }
   button, a { font: inherit; }
   .hud { position: fixed; inset: 0; pointer-events: none; }
-  .hud > *, .panel, .panel * { pointer-events: auto; }
+  .hud > *:not(#labels), .hud button, .hud a, .hud .st { pointer-events: auto; }
   .card { background: var(--card); border-radius: 22px; box-shadow: 0 6px 0 var(--ledge), 0 14px 34px rgba(59, 47, 92, .12); }
 
   /* chunky springy buttons */
   .btn { --c: var(--sky); --cd: var(--sky-d); border: 0; color: #fff; font-weight: 600; font-size: 15px; padding: 10px 16px; border-radius: 16px;
     cursor: pointer; background: var(--c); box-shadow: 0 5px 0 var(--cd), 0 9px 18px rgba(59, 47, 92, .16); text-decoration: none;
-    display: inline-flex; align-items: center; gap: 7px; transform: translateY(0) scale(1); text-shadow: 0 1px 0 rgba(0, 0, 0, .12);
-    transition: transform .32s var(--spring), box-shadow .18s var(--out), filter .2s; will-change: transform; }
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px; transform: translateY(0) scale(1); text-shadow: 0 1px 0 rgba(0, 0, 0, .12);
+    transition: transform .32s var(--spring), box-shadow .18s var(--out), filter .2s, opacity .2s; will-change: transform; }
   .btn:hover { transform: translateY(-2px) scale(1.05); filter: brightness(1.06); }
   .btn:active, .btn.press { transform: translateY(4px) scale(.95); box-shadow: 0 1px 0 var(--cd), 0 3px 8px rgba(59, 47, 92, .16); transition-duration: .07s; }
-  .btn:focus-visible, #scrub:focus-visible, .bird:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .btn:disabled { opacity: .45; cursor: default; transform: none; filter: grayscale(.4); }
+  .btn:focus-visible, #scrub:focus-visible, .area:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   .btn svg { width: 18px; height: 18px; }
   .coral { --c: var(--coral); --cd: var(--coral-d); } .sun { --c: var(--sun); --cd: var(--sun-d); color: #5a3d00; text-shadow: none; }
   .mint { --c: var(--mint); --cd: var(--mint-d); } .lilac { --c: var(--lilac); --cd: var(--lilac-d); }
   .ghost { --c: #f1edff; --cd: #d8d0f5; color: var(--ink); text-shadow: none; }
+  .huge { font-size: 22px; padding: 16px 28px; border-radius: 22px; }
 
-  #title { position: fixed; top: 16px; left: 16px; display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 10px; }
-  #title .logo { width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(160deg, #ffe08a, #ffb86b); display: grid; place-items: center;
+  #title { position: fixed; top: 16px; left: 16px; display: flex; align-items: center; gap: 12px; padding: 8px 16px 8px 8px; }
+  #title .logo { width: 46px; height: 46px; border-radius: 15px; background: linear-gradient(160deg, #ffe08a, #ffb86b); display: grid; place-items: center;
     box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .08); animation: bob 2.6s ease-in-out infinite; }
-  #title .logo svg { width: 40px; height: 40px; }
-  #title h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: .3px; line-height: 1; }
+  #title .logo svg { width: 36px; height: 36px; }
+  #title h1 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1; }
   #title h1 span { color: var(--coral); }
-  #title p { margin: 4px 0 0; color: var(--soft); font-size: 13px; }
+  #title p { margin: 3px 0 0; color: var(--soft); font-size: 13px; }
 
-  #top { position: fixed; top: 16px; right: 16px; display: flex; gap: 10px; }
-  #roster { position: fixed; top: 88px; right: 16px; width: 290px; max-height: calc(100% - 210px); overflow-y: auto; padding: 14px; scrollbar-width: none; }
-  #watchers { position: fixed; left: 16px; bottom: 118px; width: 280px; padding: 14px; }
-  .panel h2 { margin: 0 4px 10px; font-size: 14px; font-weight: 600; color: var(--soft); text-transform: uppercase; letter-spacing: 1.2px; display: flex; justify-content: space-between; }
-  .panel h2 b { color: var(--ink); font-weight: 700; letter-spacing: 0; text-transform: none; font-size: 15px; }
+  #top { position: fixed; top: 16px; right: 16px; display: flex; gap: 10px; align-items: center; }
+  .switch { display: inline-flex; padding: 4px; border-radius: 16px; background: #fff; box-shadow: 0 5px 0 var(--ledge); }
+  .switch a, .switch span { padding: 7px 14px; border-radius: 12px; font-weight: 600; text-decoration: none; color: var(--soft); transition: background .2s, color .2s, transform .3s var(--spring); }
+  .switch span { background: var(--coral); color: #fff; box-shadow: 0 3px 0 var(--coral-d); }
+  .switch a:hover { color: var(--ink); background: #f1edff; transform: scale(1.05); }
 
-  .bird { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: #faf8ff; border-radius: 16px; padding: 8px 10px; margin-bottom: 8px;
-    cursor: pointer; text-align: left; color: var(--ink); box-shadow: 0 3px 0 rgba(59, 47, 92, .07); transform: scale(1);
-    transition: transform .3s var(--spring), background .2s, box-shadow .2s; }
-  .bird:hover, .bird.hl { transform: scale(1.03) translateX(-3px); background: #fff; box-shadow: 0 4px 0 var(--id), 0 8px 16px rgba(59, 47, 92, .12); }
-  .bird.follow { background: color-mix(in srgb, var(--id) 14%, #fff); }
-  .bird .av { width: 44px; height: 44px; flex: none; border-radius: 50%; background: color-mix(in srgb, var(--id) 22%, #fff); border: 3px solid var(--id); display: grid; place-items: center; }
-  .bird .av svg { width: 34px; height: 34px; }
-  .bird .nm { font-weight: 600; font-size: 15px; } .bird .cl { color: var(--soft); font-size: 12px; }
-  .bird .meta { flex: 1; min-width: 0; } .bird .meta > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .chip { display: inline-block; margin-top: 3px; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; background: #eeebf7; color: var(--soft); transition: background .25s, color .25s, transform .3s var(--spring); }
-  .chip.heard { background: #fff1c7; color: #8a5a00; } .chip.spotted { background: #d3f8e6; color: #0f7a4d; }
-  .chip.bump { animation: bump .45s var(--spring); }
+  /* the score: big, central, one dot per bird */
+  #score { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); padding: 8px 20px 10px; text-align: center; }
+  #score .n { font-size: 30px; font-weight: 700; line-height: 1.05; } #score .n b { color: var(--mint-d); }
+  #score .n.bump { animation: bump .5s var(--spring); }
+  #score .dots { display: flex; gap: 6px; justify-content: center; margin-top: 5px; }
+  #score .dots i { width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--c); background: #fff; transition: background .3s, transform .4s var(--spring); }
+  #score .dots i.on { background: var(--c); transform: scale(1.15); }
 
-  .hut { display: flex; align-items: center; gap: 10px; padding: 6px 4px; }
-  .hut .ic { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--hc); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .1); }
-  .hut .ic svg { width: 22px; height: 22px; }
-  .hut .nm { font-weight: 600; } .hut .sub { color: var(--soft); font-size: 12px; white-space: nowrap; }
-  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 2px; vertical-align: -1px; box-shadow: 0 0 0 1.5px #fff; }
-  #roster.compact .bird .cl:not(.live) { display: none; } #roster.compact .bird { padding: 6px 10px; margin-bottom: 6px; } #roster.compact .bird .av { width: 38px; height: 38px; }
-  .hut .n { margin-left: auto; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
-  #score { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #d3f8e6, #e6fff3); border-radius: 16px; padding: 8px 12px; margin-bottom: 8px; }
-  #score .big { font-size: 30px; font-weight: 700; color: #0f7a4d; font-variant-numeric: tabular-nums; line-height: 1; }
-  #score .big.bump { animation: bump .5s var(--spring); }
-  #score small { color: #2d8f63; font-size: 12px; display: block; }
+  /* station boards: slim column of mini cards */
+  #stations { position: fixed; left: 16px; top: 92px; width: 236px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100% - 210px); overflow-y: auto; scrollbar-width: none; padding: 2px 2px 8px; }
+  .st { padding: 10px 12px 8px; border-radius: 18px; background: #fff; box-shadow: 0 5px 0 var(--ledge), 0 10px 22px rgba(59, 47, 92, .1); transition: transform .3s var(--spring); }
+  .st:hover, .st.hl { transform: scale(1.03) translateX(3px); }
+  .st-h { display: flex; align-items: center; gap: 8px; }
+  .st-h .ic { width: 26px; height: 26px; border-radius: 9px; background: var(--hc); display: grid; place-items: center; font-weight: 700; font-size: 14px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .1); }
+  .st-h .seen { margin-left: auto; color: var(--soft); font-size: 12px; } .st-h .seen b { color: var(--ink); font-size: 18px; margin-right: 2px; }
+  .st-h .seen b.bump { display: inline-block; animation: bump .45s var(--spring); }
+  .meter { height: 8px; border-radius: 6px; background: #efeaff; margin: 8px 0 3px; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 100%; border-radius: 6px; background: linear-gradient(90deg, #ffc23c, #3ddc97); transform-origin: 0 50%; transform: scaleX(0); will-change: transform; }
+  .st-m { display: flex; justify-content: space-between; color: var(--soft); font-size: 11.5px; }
+  .st-m .pct { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .st svg { display: block; width: 100%; height: 38px; margin-top: 4px; border-radius: 8px; background: #faf8ff; }
 
-  #bar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(880px, calc(100% - 32px)); display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
-  #play { width: 64px; height: 64px; border-radius: 22px; padding: 0; justify-content: center; flex: none; }
-  #play svg { width: 28px; height: 28px; }
-  #play.nudge { animation: nudge 1.6s ease-in-out infinite; }
-  #clockwrap { flex: none; text-align: center; min-width: 92px; }
-  #clock { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  #clockwrap small { color: var(--soft); font-size: 12px; display: block; }
+  #bar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(820px, calc(100% - 32px)); display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
+  #play { width: 60px; height: 60px; border-radius: 20px; padding: 0; flex: none; }
+  #play svg { width: 26px; height: 26px; }
+  #clockwrap { flex: none; text-align: center; min-width: 84px; }
+  #left { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; } #clockwrap small { color: var(--soft); font-size: 12px; display: block; }
   #speeds { display: flex; gap: 6px; flex: none; }
   #speeds .btn { padding: 7px 10px; font-size: 14px; border-radius: 12px; }
   #speeds .btn.on { --c: var(--lilac); --cd: var(--lilac-d); color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, .12); }
-
-  /* the scrubber: big track, spotted-moment lanes, squishy thumb, floating time bubble */
   #scrub { position: relative; flex: 1; height: 44px; cursor: pointer; touch-action: none; border-radius: 16px; }
   #track { position: absolute; left: 0; right: 0; top: 10px; height: 24px; border-radius: 12px; background: #efeaff; overflow: hidden; box-shadow: inset 0 3px 0 rgba(59, 47, 92, .08); }
   #strip { position: absolute; inset: 0; width: 100%; height: 100%; }
-  #fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; transform-origin: 0 50%; transform: scaleX(0); will-change: transform; background: linear-gradient(90deg, rgba(169, 139, 255, .28), rgba(255, 107, 129, .28)); }
+  #fill { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(169, 139, 255, .28), rgba(255, 107, 129, .28)); transform-origin: 0 50%; transform: scaleX(0); will-change: transform; }
   #thumb { position: absolute; top: 2px; left: 0; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: #fff; display: grid; place-items: center;
-    box-shadow: 0 4px 0 var(--ledge), 0 6px 14px rgba(59, 47, 92, .22); transform: translateX(0) scale(1); will-change: transform; }
-  #thumbicon svg { width: 30px; height: 30px; transition: transform .3s var(--spring); }
+    box-shadow: 0 4px 0 var(--ledge), 0 6px 14px rgba(59, 47, 92, .22); will-change: transform; }
+  #thumbicon { display: grid; place-items: center; } #thumbicon svg { width: 30px; height: 30px; transition: transform .3s var(--spring); }
   #scrub.drag #thumbicon svg { transform: scale(1.22) rotate(-8deg); }
-  #thumbicon { display: grid; place-items: center; }
-  #thumb .bubble { left: 50%; bottom: 48px; }
   .bubble { position: absolute; bottom: 50px; left: 0; padding: 4px 10px; border-radius: 10px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap;
     transform: translateX(-50%) scale(.6); opacity: 0; transition: opacity .15s, transform .3s var(--spring); pointer-events: none; font-variant-numeric: tabular-nums; }
-  .bubble.on { opacity: 1; transform: translateX(-50%) scale(1); }
-  #ghost { background: rgba(59, 47, 92, .75); }
+  #thumb .bubble { left: 50%; bottom: 48px; } .bubble.on { opacity: 1; transform: translateX(-50%) scale(1); } #ghost { background: rgba(59, 47, 92, .75); }
 
-  /* world-anchored labels: outer moves (transform only), inner animates */
+  /* placement */
+  #place { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(640px, calc(100% - 32px)); padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+  #place .txt { flex: 1; } #place .txt b { font-size: 18px; } #place .txt p { margin: 2px 0 0; color: var(--soft); font-size: 13px; }
+  .stepper { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; background: #f1edff; border-radius: 12px; padding: 3px; }
+  .stepper button { width: 26px; height: 26px; border: 0; border-radius: 9px; background: #fff; color: var(--ink); font-weight: 700; cursor: pointer; box-shadow: 0 2px 0 var(--ledge); transition: transform .25s var(--spring); }
+  .stepper button:active { transform: scale(.88); } .stepper span { min-width: 64px; text-align: center; font-weight: 600; font-size: 13px; }
+  #release.busy { pointer-events: none; } #release.busy .lbl::after { content: '…'; }
+
+  /* overlays: area picker, end card */
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(59, 47, 92, .18); backdrop-filter: blur(3px); z-index: 3; opacity: 0; pointer-events: none; transition: opacity .35s var(--out); }
+  .overlay.on { opacity: 1; pointer-events: auto; }
+  .overlay > .card { padding: 26px 28px; text-align: center; width: min(560px, calc(100% - 32px)); transform: scale(.85) translateY(20px); transition: transform .5s var(--spring); }
+  .overlay.on > .card { transform: none; }
+  .overlay h2 { margin: 0 0 4px; font-size: 28px; } .overlay p { margin: 0 0 16px; color: var(--soft); }
+  #areas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .area { border: 0; border-radius: 18px; padding: 14px; cursor: pointer; text-align: left; color: var(--ink); background: var(--bg); box-shadow: 0 5px 0 rgba(59, 47, 92, .12);
+    transition: transform .3s var(--spring); }
+  .area:hover { transform: translateY(-3px) scale(1.04) rotate(-1deg); } .area:active { transform: scale(.96); }
+  .area b { display: block; font-size: 17px; } .area small { color: var(--soft); }
+  .area .e { font-size: 26px; display: block; margin-bottom: 4px; }
+  #stars { font-size: 44px; letter-spacing: 6px; margin: 4px 0 2px; } #stars i { font-style: normal; display: inline-block; animation: star .6s var(--spring) both; }
+  #stars i.off { filter: grayscale(1) opacity(.3); }
+  #best { color: var(--soft); margin-bottom: 18px; } .end-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  /* world-anchored bits: outer moves (transform only), inner animates */
   #labels > div { position: absolute; left: 0; top: 0; will-change: transform; pointer-events: none; }
-  .tag { transform: translate(-50%, -100%); padding: 3px 9px; border-radius: 99px; background: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; border: 2px solid var(--id);
-    box-shadow: 0 3px 0 rgba(59, 47, 92, .12); transition: transform .3s var(--spring); }
-  .tag.big { transform: translate(-50%, -100%) scale(1.18); }
-  .sign { transform: translate(-50%, -100%); padding: 2px 8px; border-radius: 8px; background: #fff7e0; border: 2px solid #c98b5a; font-size: 12px; font-weight: 700; color: #8a5a3b; }
-  .say { position: absolute; transform: translate(-50%, -100%) scale(.2); opacity: 0; padding: 6px 11px; border-radius: 14px; background: #fff; font-size: 13px; font-weight: 600; white-space: nowrap;
-    box-shadow: 0 4px 0 var(--ledge), 0 8px 16px rgba(59, 47, 92, .15); transition: opacity .2s, transform .45s var(--spring); }
-  .say::after { content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #fff; }
+  .tag { transform: translate(-50%, -100%) scale(.6); opacity: 0; padding: 4px 10px; border-radius: 99px; background: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; border: 2.5px solid var(--id);
+    box-shadow: 0 3px 0 rgba(59, 47, 92, .12); transition: transform .35s var(--spring), opacity .15s; }
+  .tag.on { opacity: 1; transform: translate(-50%, -100%) scale(1); } .tag small { color: var(--soft); font-weight: 500; }
+  .sign { transform: translate(-50%, -100%); width: 22px; height: 22px; border-radius: 8px; background: var(--hc); border: 2px solid #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 2px 0 var(--ledge); }
+  .check { transform: translate(-50%, -100%) scale(0); width: 22px; height: 22px; border-radius: 50%; background: var(--mint); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px;
+    border: 2px solid #fff; box-shadow: 0 2px 0 rgba(31, 174, 116, .5); transition: transform .45s var(--spring); }
+  .check.on { transform: translate(-50%, -100%) scale(1); }
+  .say { position: absolute; transform: translate(-50%, -100%) scale(.2); opacity: 0; padding: 6px 12px; border-radius: 14px; background: var(--mint); color: #fff; font-size: 16px; font-weight: 700; white-space: nowrap;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .15); box-shadow: 0 4px 0 var(--mint-d), 0 8px 16px rgba(59, 47, 92, .15); transition: opacity .2s, transform .45s var(--spring); }
   .say.on { opacity: 1; transform: translate(-50%, -100%) scale(1); }
-  .say.spot { background: #3ddc97; color: #fff; font-size: 15px; text-shadow: 0 1px 0 rgba(0, 0, 0, .15); }
-  .say.spot::after { border-top-color: #3ddc97; }
+  .ping { transform: translate(-50%, -100%) scale(.3); opacity: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--sun); color: #5a3d00; font-weight: 700; display: grid; place-items: center;
+    border: 2px solid #fff; transition: opacity .2s, transform .4s var(--spring); }
+  .ping.on { opacity: 1; transform: translate(-50%, -100%) scale(1); }
 
-  #hint { pointer-events: none !important; position: fixed; left: 50%; bottom: 112px; transform: translateX(-50%); padding: 8px 14px; border-radius: 99px; background: rgba(255, 255, 255, .9); color: var(--soft); font-size: 13px;
-    transition: opacity .6s; box-shadow: 0 4px 0 var(--ledge); white-space: nowrap; }
+  #toast { position: fixed; left: 50%; top: 96px; transform: translate(-50%, -12px); padding: 10px 16px; border-radius: 14px; background: var(--ink); color: #fff; opacity: 0; transition: opacity .25s, transform .4s var(--spring); z-index: 4; pointer-events: none; }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
   #loading { position: fixed; inset: 0; display: grid; place-items: center; background: linear-gradient(180deg, #74cbff, #ffeccc); z-index: 5; transition: opacity .6s var(--out); }
   #loading .card { padding: 22px 30px; text-align: center; font-size: 18px; font-weight: 600; }
-  #loading .dots span { display: inline-block; width: 12px; height: 12px; margin: 10px 4px 0; border-radius: 50%; background: var(--coral); animation: hop 1s var(--spring) infinite; }
-  #loading .dots span:nth-child(2) { background: var(--sun); animation-delay: .12s; } #loading .dots span:nth-child(3) { background: var(--mint); animation-delay: .24s; }
+  .dots3 span { display: inline-block; width: 12px; height: 12px; margin: 10px 4px 0; border-radius: 50%; background: var(--coral); animation: hop 1s var(--spring) infinite; }
+  .dots3 span:nth-child(2) { background: var(--sun); animation-delay: .12s; } .dots3 span:nth-child(3) { background: var(--mint); animation-delay: .24s; }
 
-  .enter { animation: enter .7s var(--spring) both; }
-  @keyframes enter { from { opacity: 0; transform: translateY(24px) scale(.9); } }
-  #bar.enter { animation-name: enterbar; } @keyframes enterbar { from { opacity: 0; transform: translate(-50%, 40px) scale(.9); } }
+  /* which bits show in which phase */
+  body:not([data-mode="place"]):not([data-mode="loading"]) #place, body:not([data-mode="round"]):not([data-mode="end"]) :is(#bar, #score, #stations) { display: none; }
+  .enter { animation: enter .6s var(--spring) both; }
+  @keyframes enter { from { opacity: 0; transform: translateY(24px) scale(.92); } }
+  #bar.enter, #place.enter { animation-name: enterbar; } @keyframes enterbar { from { opacity: 0; transform: translate(-50%, 40px) scale(.9); } }
+  #score.enter { animation-name: enterscore; } @keyframes enterscore { from { opacity: 0; transform: translate(-50%, -30px) scale(.8); } }
   @keyframes bob { 50% { transform: translateY(-4px) rotate(-4deg); } }
-  @keyframes bump { 40% { transform: scale(1.25); } }
+  @keyframes bump { 40% { transform: scale(1.3); } }
   @keyframes hop { 50% { transform: translateY(-10px); } }
-  @keyframes nudge { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  @keyframes star { from { transform: scale(0) rotate(-40deg); } }
 
   @media (max-width: 760px) {
-    #title { top: 10px; left: 10px; padding: 6px 12px 6px 6px; } #title .logo { width: 40px; height: 40px; } #title .logo svg { width: 30px; height: 30px; }
-    #title h1 { font-size: 20px; } #title p { font-size: 11px; }
-    #top { top: auto; bottom: 168px; right: 10px; flex-direction: column; } #top .btn { padding: 9px; } #top .btn .lbl { display: none; }
-    #roster { top: 74px; left: 10px; right: 10px; width: auto; max-height: none; padding: 8px; display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; }
-    #roster h2 { display: none; } #birds { display: flex; gap: 8px; } .bird { flex: none; width: auto; margin: 0; padding: 6px 10px 6px 6px; } .bird .cl { display: none; } .bird .av { width: 36px; height: 36px; }
-    #watchers { display: none; }
+    #title { top: 10px; left: 10px; padding: 5px 10px 5px 5px; } #title .logo { width: 36px; height: 36px; } #title .logo svg { width: 28px; height: 28px; }
+    #title h1 { font-size: 17px; } #title p { display: none; }
+    #top { top: 10px; right: 10px; gap: 6px; } #top .lbl { display: none; } #top .btn { padding: 9px; } .switch a, .switch span { padding: 6px 9px; font-size: 13px; }
+    #score { top: 64px; padding: 6px 14px 8px; } #score .n { font-size: 22px; }
+    #stations { top: auto; bottom: 150px; left: 10px; right: 10px; width: auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; max-height: none; }
+    .st { flex: none; width: 188px; }
     #bar { bottom: 10px; width: calc(100% - 20px); gap: 10px; padding: 10px; flex-wrap: wrap; }
-    #play { width: 52px; height: 52px; } #scrub { order: 3; flex-basis: 100%; } #speeds { margin-left: auto; } #speeds .btn { padding: 6px 8px; font-size: 13px; }
-    #clock { font-size: 18px; } #hint { display: none; }
+    #play { width: 50px; height: 50px; } #scrub { order: 3; flex-basis: 100%; } #speeds { margin-left: auto; } #speeds .btn { padding: 6px 8px; font-size: 13px; }
+    #place { bottom: 10px; width: calc(100% - 20px); flex-direction: column; align-items: stretch; text-align: center; } #place .huge { width: 100%; }
+    #areas { grid-template-columns: 1fr; } .overlay > .card { padding: 20px; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
-  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; } }
 </style>
 </head>
-<body>
-<div id="loading"><div class="card">Waking up the birds<div class="dots"><span></span><span></span><span></span></div></div></div>
+<body data-mode="boot">
+<div id="loading"><div class="card">Waking up the birds<div class="dots3"><span></span><span></span><span></span></div></div></div>
 <div class="hud">
   <div id="labels"></div>
-  <header id="title" class="card enter">
-    <div class="logo" id="logo"></div>
-    <div><h1>Sky <span>Spotters</span></h1><p id="sub"></p></div>
-  </header>
-  <div id="top" class="enter" style="animation-delay:.1s">
-    <button id="overview" class="btn ghost" title="Back to the whole board (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span class="lbl">Overview</span></button>
-    <button id="sound" class="btn lilac" aria-pressed="false" title="Sounds (off)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path id="snd-x" d="M17 9l4 6M21 9l-4 6"/><path id="snd-w" d="M17 8a5 5 0 0 1 0 8" style="display:none"/></svg><span class="lbl">Sound</span></button>
-    <a class="btn sun" href="../viewer/" title="The detailed radio view"><span class="lbl">Pro view</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  <header id="title" class="card enter"><div class="logo" id="logo"></div><div><h1>Sky <span>Spotters</span></h1><p id="sub"></p></div></header>
+  <div id="top" class="enter" style="animation-delay:.08s">
+    <button id="overview" class="btn ghost" title="Back to the whole board (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>
+    <button id="sound" class="btn lilac" aria-pressed="false" title="Sounds (off)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path id="snd-x" d="M17 9l4 6M21 9l-4 6"/><path id="snd-w" d="M17 8a5 5 0 0 1 0 8" style="display:none"/></svg></button>
+    <nav class="switch" aria-label="View"><span aria-current="page">Simple</span><a id="toPro" href="../viewer/">Pro</a></nav>
   </div>
-  <aside id="roster" class="panel card enter" style="animation-delay:.18s"><h2>Birds <b id="nbirds"></b></h2><div id="birds"></div></aside>
-  <aside id="watchers" class="panel card enter" style="animation-delay:.26s">
-    <div id="score"><div><div class="big" id="spotted">0</div><small>times spotted so far</small></div></div>
-    <h2>Watchers</h2><div id="huts"></div>
-  </aside>
-  <div id="bar" class="card enter" style="animation-delay:.34s">
-    <button id="play" class="btn coral nudge" aria-label="Play"></button>
-    <div id="clockwrap"><div id="clock">--:--:--</div><small>UTC</small></div>
+  <div id="score" class="card enter"><div class="n" id="scoreN">Caught <b>0</b> / 0</div><div class="dots" id="scoreDots"></div></div>
+  <div id="stations"></div>
+  <div id="place" class="card enter">
+    <div class="txt"><b id="placeTitle">Place your huts</b><p>Tap the map to drop a hut · drag to move · tap to remove</p>
+      <button id="where" class="btn ghost" style="padding:5px 10px;font-size:13px;border-radius:10px;margin:6px 6px 0 0">Change place</button><div class="stepper" title="How many birds fly this round"><button id="bminus" aria-label="Fewer birds">−</button><span id="bcount">6 birds</span><button id="bplus" aria-label="More birds">+</button></div></div>
+    <button id="release" class="btn coral huge"><span class="lbl">Release the birds!</span></button>
+  </div>
+  <div id="bar" class="card">
+    <button id="play" class="btn coral" aria-label="Play"></button>
+    <div id="clockwrap"><div id="left">10:00</div><small>left</small></div>
     <div id="scrub" role="slider" tabindex="0" aria-label="Time" aria-valuemin="0">
       <div id="track"><canvas id="strip"></canvas><div id="fill"></div></div>
       <div id="thumb"><span id="thumbicon"></span><div class="bubble" id="tbubble"></div></div>
@@ -175,8 +195,11 @@
     </div>
     <div id="speeds"></div>
   </div>
-  <div id="hint">Drag to look around · scroll to zoom · click a bird to follow it</div>
 </div>
+<div id="picker" class="overlay"><div class="card"><h2>Where do we watch?</h2><p>Pick a place. Real terrain, cute birds.</p><div id="areas"></div></div></div>
+<div id="endcard" class="overlay"><div class="card"><div id="stars"></div><h2 id="endTitle"></h2><div id="best"></div>
+  <div class="end-btns"><button id="again" class="btn coral huge">Play again</button><button id="move" class="btn sky huge">Move stations</button></div></div></div>
+<div id="toast"></div>
 
 <script type="importmap">
 { "imports": {
@@ -195,29 +218,26 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const $ = s => document.querySelector(s);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const VEX = 5;           // vertical exaggeration: lumpier, cuter hills (birds use the same mapping, so heights stay true)
-const BIRD_PX = 62;      // birds are drawn this many pixels long at any zoom
+const BIRD_PX = 64;      // birds are drawn this many pixels long at any zoom
+const MAX_HUTS = 6, ROUND_SPEED = 10;   // a 600 s round plays in ~60 s
 const ID = ['#ff6b81', '#4fb8ff', '#ffc23c', '#3ddc97', '#a98bff', '#ff9f43', '#22d3ee', '#f472b6'];
+const HUTC = ['#c8f4dd', '#ffe1ec', '#e3dcff', '#d8efff', '#fff1c7', '#ffe0cc'];
 const damp = (rate, dt) => 1 - Math.exp(-rate * dt);   // frame-rate independent easing factor
 const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
-const ease = { outCubic: k => 1 - (1 - k) ** 3, inOut: k => k < .5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2,
-  outBack: k => { const c = 1.9; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; } };
-
+const ease = { inOut: k => k < .5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2, outBack: k => { const c = 1.9; return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2; } };
 const birdSVG = (body, head, wing, beak) => `<svg viewBox="0 0 40 40"><ellipse cx="19" cy="24" rx="13" ry="10.5" fill="${body}"/><circle cx="26" cy="16" r="8.2" fill="${head}"/>
   <path d="M7 22q7-9 15 0q-8 5-15 0z" fill="${wing}"/><circle cx="28" cy="14.6" r="2.7" fill="#2a2140"/><circle cx="28.9" cy="13.7" r="1" fill="#fff"/>
   <path d="M33.6 16.2l6 2-6 2z" fill="${beak}"/><circle cx="24" cy="19.6" r="2.2" fill="#ff9fb7" opacity=".85"/></svg>`;
 $('#logo').innerHTML = birdSVG('#ff8fa3', '#ff6b81', '#ffd0d8', '#ffb347');
+$('#thumbicon').innerHTML = birdSVG('#ff8fa3', '#ff6b81', '#ffd0d8', '#ffb347');
+const toast = msg => { const e = $('#toast'); e.textContent = msg; e.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove('on'), 3200); };
+const getJSON = async (url, body) => {
+  const r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' } : { cache: 'no-store' });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error ?? `${r.status} ${r.statusText}`);
+  return j;
+};
 
-let B;
-try { B = await (await fetch('../out/bundle.json', { cache: 'no-store' })).json(); }
-catch {
-  $('#loading .card').innerHTML = 'No flight data yet 🪺<br><small style="color:var(--soft)">Run <code>sim.py</code>, then reload.</small>';
-  throw new Error('no out/bundle.json');
-}
-
-// ---------- data ----------
-const S = B.scenario, T = B.terrain, N = B.t.length;
-const objIds = Object.keys(B.truth);
-const objOf = id => S.objects.find(o => o.id === id) ?? {};
 const SPECIES = {
   hummingbird: { name: 'Hummingbird', body: '#34d399', belly: '#fff7e6', head: '#22b07d', wing: '#b8f5dc', tip: null, beak: '#3b2f5c', beakLen: .78, beakR: .045,
     span: 1.05, chord: .34, freq: 15, glide: .5, flap: .95, throat: '#ff6b9a', blur: true, size: .82 },
@@ -229,33 +249,7 @@ const SPECIES = {
     span: 1.95, chord: .48, freq: 4.4, glide: .14, flap: .7, neck: '#5fd4c4', size: .95 },
 };
 const SPECIES_OF = { quadcopter: 'hummingbird', fixed_wing_recon: 'stork', delta_wing: 'swift', decoy: 'pigeon' };
-const typeOf = id => objOf(id).type ?? (B.drones?.[id]?.model ?? '').split('/').pop().replace('.glb', '');
-const speciesOf = id => SPECIES[SPECIES_OF[typeOf(id)]] ?? SPECIES.pigeon;
-const idColor = id => ID[objIds.indexOf(id) % ID.length];
-const fmtT = t => new Date(Date.parse(S.start_utc) + t * 1000).toISOString().slice(11, 19);
-
-let zmin = Infinity, zmax = -Infinity;
-for (const z of T.z) { zmin = Math.min(zmin, z); zmax = Math.max(zmax, z); }
-const zr = Math.max(zmax - zmin, 1), base = zmin - zr * 0.22, wl = zmin + zr * 0.035;  // wl: water level
-const toScene = (x, y, z) => new THREE.Vector3(x / 1000, (z - base) * VEX / 1000, -y / 1000);
-function groundH(x, y) {
-  const c = clamp((x - T.x0) / T.dx, 0, T.nx - 1.001), r = clamp((T.y0 - y) / T.dy, 0, T.ny - 1.001);
-  const c0 = c | 0, r0 = r | 0, fc = c - c0, fr = r - r0, z = (i, j) => T.z[i * T.nx + j];
-  return (z(r0, c0) * (1 - fc) + z(r0, c0 + 1) * fc) * (1 - fr) + (z(r0 + 1, c0) * (1 - fc) + z(r0 + 1, c0 + 1) * fc) * fr;
-}
-const X0 = T.x0, X1 = T.x0 + (T.nx - 1) * T.dx, Y1 = T.y0, Y0 = T.y0 - (T.ny - 1) * T.dy;
-const W = (X1 - X0) / 1000, H = (Y1 - Y0) / 1000, CX = (X0 + X1) / 2000, CZ = -(Y0 + Y1) / 2000, D = Math.max(W, H);
-const fixAt = Object.fromEntries(objIds.map(id => [id, new Map((B.fused[id] ?? []).map(f => [f[0], f]))]));
-const linksOf = sid => objIds.map(oid => [oid, B.links[`${sid}|${oid}`]]).filter(([, L]) => L);
-const status = (id, i) => {
-  const fx = fixAt[id].get(B.t[i]);
-  if (fx) return { k: 'spotted', fx };
-  const by = B.sensors.filter(s => B.links[`${s.id}|${id}`]?.det[i]).map(s => s.id);
-  return by.length ? { k: 'heard', by } : { k: 'hidden' };
-};
-// running totals so the score panel is exact at any time, also after a seek
-const fixCum = Object.fromEntries(objIds.map(id => { let n = 0; return [id, B.t.map(t => (n += fixAt[id].has(t) ? 1 : 0))]; }));
-const heardCum = Object.fromEntries(B.sensors.map(s => { let n = 0; const ls = linksOf(s.id); return [s.id, B.t.map((_, i) => (n += ls.filter(([, L]) => L.det[i]).length))]; }));
+const AREA_LOOK = { kaniv: ['🌊', '#d8efff'], yaremche: ['⛰️', '#e3dcff'], devin: ['🌲', '#c8f4dd'], flevoland: ['🌷', '#ffe1ec'] };
 
 // ---------- renderer, camera, light ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -268,45 +262,59 @@ document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.05, 400);
 const controls = new OrbitControls(camera, renderer.domElement);
-Object.assign(controls, { enableDamping: true, dampingFactor: .085, maxPolarAngle: 1.36, minDistance: .8, maxDistance: D * 4, rotateSpeed: .8, zoomSpeed: .9 });
+Object.assign(controls, { enableDamping: true, dampingFactor: .085, maxPolarAngle: 1.36, minDistance: .8, rotateSpeed: .8, zoomSpeed: .9 });
 scene.add(new THREE.HemisphereLight('#ffffff', '#ffd2b0', 1.25));
 const sun = new THREE.DirectionalLight('#fff4e2', 2.3);
-sun.position.set(CX - D * .45, D * 1.1, CZ + D * .35);
-sun.target.position.set(CX, 0, CZ);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -D * .75, right: D * .75, top: D * .75, bottom: -D * .75, near: 1, far: D * 3 });
-sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03; sun.shadow.camera.updateProjectionMatrix();
+sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
-
 const grad = new THREE.DataTexture(new Uint8Array([110, 185, 255]), 3, 1, THREE.RedFormat);
 grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
 const toon = (color, o = {}) => new THREE.MeshToonMaterial({ color, gradientMap: grad, ...o });
 const INK = '#3b2f5c';
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const disposeTree = o => o.traverse(c => { c.geometry?.dispose?.(); (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m?.dispose?.()); });
 
-// ---------- the diorama: faceted pastel terrain, water, soil skirt, rounded board ----------
-const board = new THREE.Group();
-scene.add(board);
-const wlRel = (wl - zmin) / zr;
-// bands by height quantile, so a flat floodplain still gets every colour; lavender on the hilltops
-const above = T.z.filter(z => z > wl).sort((a, b) => a - b), qz = k => above[Math.min(above.length - 1, Math.floor(k * above.length))] ?? zmax;
-const BANDS = [[qz(.22), '#b6efbd'], [qz(.5), '#8fe09f'], [qz(.74), '#6fcf8c'], [qz(.94), '#c9e98a'], [Infinity, '#dccff8']];
-function bandColor(z, jitter) {
-  const c = new THREE.Color(z < wl ? '#f2dca6' : z < wl + zr * .012 ? '#ffe8ad' : BANDS.find(b => z < b[0])[1]);
-  return c.offsetHSL(0, 0, jitter);
+// ---------- the current area: terrain grid, frame, helpers ----------
+let AREA = null, T = null, F = null, zmin, zmax, zr, base, wl, wlRel, X0, X1, Y0, Y1, W, H, CX, CZ, D, home, board = null, land = null, water = null;
+const toScene = (x, y, z) => new THREE.Vector3(x / 1000, (z - base) * VEX / 1000, -y / 1000);
+const xyOf = (lat, lon) => [(lon - F.lon0) * F.mx, (lat - F.lat0) * F.my];
+const llOf = (x, y) => [F.lat0 + y / F.my, F.lon0 + x / F.mx];
+function groundH(x, y) {
+  const c = clamp((x - T.x0) / T.dx, 0, T.nx - 1.001), r = clamp((T.y0 - y) / T.dy, 0, T.ny - 1.001);
+  const c0 = c | 0, r0 = r | 0, fc = c - c0, fr = r - r0, z = (i, j) => T.z[i * T.nx + j];
+  return (z(r0, c0) * (1 - fc) + z(r0, c0 + 1) * fc) * (1 - fr) + (z(r0 + 1, c0) * (1 - fc) + z(r0 + 1, c0 + 1) * fc) * fr;
 }
-{
-  const NX = 100, NY = Math.max(8, Math.round(NX * H / W));
-  const P = [];
+
+// ---------- the diorama: faceted pastel terrain, water, soil skirt, rounded board, trees, houses, clouds ----------
+let popItems = [], clouds = [], introT = 99;
+function buildBoard(seed) {
+  if (board) { scene.remove(board); disposeTree(board); }
+  board = new THREE.Group(); scene.add(board); popItems = []; clouds = []; introT = REDUCED ? 99 : 0;
+  zmin = Infinity; zmax = -Infinity;
+  for (const z of T.z) { zmin = Math.min(zmin, z); zmax = Math.max(zmax, z); }
+  zr = Math.max(zmax - zmin, 1); base = zmin - zr * .22; wl = zmin + zr * .035; wlRel = (wl - zmin) / zr;
+  X0 = T.x0; X1 = T.x0 + (T.nx - 1) * T.dx; Y1 = T.y0; Y0 = T.y0 - (T.ny - 1) * T.dy;
+  W = (X1 - X0) / 1000; H = (Y1 - Y0) / 1000; CX = (X0 + X1) / 2000; CZ = -(Y0 + Y1) / 2000; D = Math.max(W, H);
+  sun.position.set(CX - D * .45, D * 1.1, CZ + D * .35); sun.target.position.set(CX, 0, CZ);
+  Object.assign(sun.shadow.camera, { left: -D * .75, right: D * .75, top: D * .75, bottom: -D * .75, near: 1, far: D * 3 });
+  sun.shadow.camera.updateProjectionMatrix();
+  controls.maxDistance = D * 4;
+  const target = new THREE.Vector3(CX, (zmax - base) * VEX / 2000, CZ), dist = D * 1.55 * Math.max(1, 1.25 / (innerWidth / innerHeight));
+  home = { target, pos: target.clone().add(new THREE.Vector3(-.36, .72, .6).normalize().multiplyScalar(dist)) };
+
+  // bands by height quantile, so a flat floodplain still gets every colour; lavender on the hilltops
+  const above = T.z.filter(z => z > wl).sort((a, b) => a - b), qz = k => above[Math.min(above.length - 1, Math.floor(k * above.length))] ?? zmax;
+  const BANDS = [[qz(.22), '#b6efbd'], [qz(.5), '#8fe09f'], [qz(.74), '#6fcf8c'], [qz(.94), '#c9e98a'], [Infinity, '#dccff8']];
+  const bandColor = (z, j) => new THREE.Color(z < wl ? '#f2dca6' : z < wl + zr * .012 ? '#ffe8ad' : BANDS.find(b => z < b[0])[1]).offsetHSL(0, 0, j);
+  const NX = 100, NY = Math.max(8, Math.round(NX * H / W)), P = [];
   for (let r = 0; r <= NY; r++) for (let c = 0; c <= NX; c++) {
     const x = X0 + (X1 - X0) * c / NX, y = Y1 - (Y1 - Y0) * r / NY, z = groundH(x, y);
     P.push([toScene(x, y, z), z]);
   }
-  const pos = [], col = [], rnd = mulberry(S.seed ?? 1);
-  const tri = (a, b, c) => {
-    const cc = bandColor((a[1] + b[1] + c[1]) / 3, (rnd() - .5) * .05);
-    for (const v of [a, b, c]) { pos.push(...v[0].toArray()); col.push(cc.r, cc.g, cc.b); }
-  };
+  const pos = [], col = [], rnd = mulberry(seed);
+  const tri = (a, b, c) => { const cc = bandColor((a[1] + b[1] + c[1]) / 3, (rnd() - .5) * .05); for (const v of [a, b, c]) { pos.push(...v[0].toArray()); col.push(cc.r, cc.g, cc.b); } };
   for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) {
     const a = P[r * (NX + 1) + c], b = P[r * (NX + 1) + c + 1], d = P[(r + 1) * (NX + 1) + c], e = P[(r + 1) * (NX + 1) + c + 1];
     if ((r + c) % 2) { tri(a, d, b); tri(b, d, e); } else { tri(a, d, e); tri(a, e, b); }
@@ -315,14 +323,11 @@ function bandColor(z, jitter) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.computeVertexNormals();
-  const land = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true }));
-  land.receiveShadow = true;
-  board.add(land);
-
-  // soil skirt from the terrain edge down to the board
+  land = new THREE.Mesh(g, toon('#ffffff', { vertexColors: true }));
+  land.receiveShadow = true; board.add(land);
   const sk = [], skc = [], top = new THREE.Color('#c48a5c'), bot = new THREE.Color('#9c6a45');
-  const edge = (pts) => { for (let k = 0; k < pts.length - 1; k++) {
-    const [p, q] = [pts[k][0], pts[k + 1][0]], p0 = p.clone().setY(0), q0 = q.clone().setY(0);
+  const edge = pts => { for (let k = 0; k < pts.length - 1; k++) {
+    const p = pts[k][0], q = pts[k + 1][0], p0 = p.clone().setY(0), q0 = q.clone().setY(0);
     for (const v of [p, p0, q, q, p0, q0]) { sk.push(...v.toArray()); const cc = v.y === 0 ? bot : top; skc.push(cc.r, cc.g, cc.b); }
   } };
   const row = r => P.slice(r * (NX + 1), (r + 1) * (NX + 1)), colm = c => Array.from({ length: NY + 1 }, (_, r) => P[r * (NX + 1) + c]);
@@ -332,106 +337,77 @@ function bandColor(z, jitter) {
   sg.setAttribute('color', new THREE.Float32BufferAttribute(skc, 3));
   sg.computeVertexNormals();
   board.add(new THREE.Mesh(sg, toon('#ffffff', { vertexColors: true, side: THREE.DoubleSide })));
-
-  // rounded board under everything, like a toy tile
   const m = .45, rr = Math.min(W, H) * .08, w = W + 2 * m, h = H + 2 * m, sh = new THREE.Shape();
   sh.moveTo(-w / 2 + rr, -h / 2); sh.lineTo(w / 2 - rr, -h / 2); sh.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + rr);
   sh.lineTo(w / 2, h / 2 - rr); sh.quadraticCurveTo(w / 2, h / 2, w / 2 - rr, h / 2); sh.lineTo(-w / 2 + rr, h / 2);
   sh.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - rr); sh.lineTo(-w / 2, -h / 2 + rr); sh.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + rr, -h / 2);
   const depth = .5, bev = .14;
   const slab = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelSize: bev, bevelThickness: bev, bevelSegments: 5, curveSegments: 10 }), toon('#fff1d9'));
-  slab.rotation.x = -Math.PI / 2;
-  slab.position.set(CX, -depth - bev - .002, CZ);
-  slab.receiveShadow = true;
-  board.add(slab);
+  slab.rotation.x = -Math.PI / 2; slab.position.set(CX, -depth - bev - .002, CZ); slab.receiveShadow = true; board.add(slab);
   const under = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: .18, bevelEnabled: true, bevelSize: bev * 1.1, bevelThickness: .06, bevelSegments: 3, curveSegments: 10 }), toon('#ffb88a'));
-  under.rotation.x = -Math.PI / 2;
-  under.position.set(CX, -depth - bev * 2 - .26, CZ);
-  board.add(under);
-}
-const water = new THREE.Mesh(new THREE.PlaneGeometry(W, H), toon('#7fd6ff', { transparent: true, opacity: .86 }));
-water.rotation.x = -Math.PI / 2;
-water.position.set(CX, (wl - base) * VEX / 1000, CZ);
-water.receiveShadow = true;
-board.add(water);
+  under.rotation.x = -Math.PI / 2; under.position.set(CX, -depth - bev * 2 - .26, CZ); board.add(under);
+  water = new THREE.Mesh(new THREE.PlaneGeometry(W, H), toon('#7fd6ff', { transparent: true, opacity: .86 }));
+  water.rotation.x = -Math.PI / 2; water.position.set(CX, (wl - base) * VEX / 1000, CZ); water.receiveShadow = true; board.add(water);
 
-function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-
-// ---------- trees and houses: instanced, popping in at the start ----------
-const popItems = [];   // [instancedMesh, index, matrix parts, delay]
-function instanced(geo, mat, items) {
-  const im = new THREE.InstancedMesh(geo, mat, Math.max(items.length, 1));
-  im.count = items.length;
-  im.castShadow = true; im.receiveShadow = true;
-  items.forEach((it, k) => { if (it.color) im.setColorAt(k, new THREE.Color(it.color)); popItems.push([im, k, it]); setInst(im, k, it, REDUCED ? 1 : 0); });
-  board.add(im);
-  return im;
-}
-const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
-function setInst(im, k, it, f) { _q.setFromAxisAngle(_up, it.rot ?? 0); _s.copy(it.scale).multiplyScalar(Math.max(f, 1e-4)); im.setMatrixAt(k, _m.compose(it.pos, _q, _s)); }
-{
-  const rnd = mulberry((S.seed ?? 1) * 7 + 3), noise = (x, y) => Math.sin(x * .00105 + 1.3) * Math.cos(y * .00121 - .7) + .5 * Math.sin((x + y) * .0023);
-  const huts = B.sensors.map(s => [s.x, s.y]);
-  const free = (x, y, r) => huts.every(([hx, hy]) => Math.hypot(hx - x, hy - y) > r);
+  // trees and houses, instanced, popping in
+  const r2 = mulberry(seed * 7 + 3), noise = (x, y) => Math.sin(x * .00105 + 1.3) * Math.cos(y * .00121 - .7) + .5 * Math.sin((x + y) * .0023);
   const slope = (x, y) => Math.hypot(groundH(x + 70, y) - groundH(x - 70, y), groundH(x, y + 70) - groundH(x, y - 70)) / 140;
   const trunks = [], round = [], pines = [], walls = [], roofs = [];
   const GREENS = ['#46c389', '#6bd49b', '#38ad78', '#8fe0a5', '#5fcf8f'], PINES = ['#2f9e6a', '#3cb878', '#2b8f60'];
-  for (let n = 0; n < 5200 && trunks.length < 620; n++) {
-    const x = X0 + rnd() * (X1 - X0), y = Y0 + rnd() * (Y1 - Y0), z = groundH(x, y), rel = (z - zmin) / zr;
-    if (rel < wlRel + .06 || slope(x, y) > .22 || !free(x, y, 450)) continue;
-    if (rnd() > (noise(x, y) > .25 ? .85 : .08)) continue;
-    const s = .06 + rnd() * .05, p = toScene(x, y, z), pine = rel > .55 ? rnd() < .55 : rnd() < .15;
-    trunks.push({ pos: p.clone().add(new THREE.Vector3(0, s * .45, 0)), scale: new THREE.Vector3(s * .5, s * .9, s * .5), d: Math.hypot(p.x - CX, p.z - CZ) });
-    const leaf = { pos: p.clone().add(new THREE.Vector3(0, s * (pine ? 1.5 : 1.25), 0)), scale: new THREE.Vector3(s * .62, s * (pine ? 1.1 : .62), s * .62), rot: rnd() * 6,
-      color: pine ? PINES[(rnd() * 3) | 0] : rnd() < .06 ? '#ffb3c7' : GREENS[(rnd() * 5) | 0], d: trunks.at(-1).d };
-    (pine ? pines : round).push(leaf);
+  for (let n = 0; n < 5200 && trunks.length < 560; n++) {
+    const x = X0 + r2() * (X1 - X0), y = Y0 + r2() * (Y1 - Y0), z = groundH(x, y), rel = (z - zmin) / zr;
+    if (rel < wlRel + .06 || slope(x, y) > .22) continue;
+    if (r2() > (noise(x, y) > .25 ? .85 : .08)) continue;
+    const s = .06 + r2() * .05, p = toScene(x, y, z), pine = rel > .55 ? r2() < .55 : r2() < .15, d = Math.hypot(p.x - CX, p.z - CZ);
+    trunks.push({ pos: p.clone().add(new THREE.Vector3(0, s * .45, 0)), scale: new THREE.Vector3(s * .5, s * .9, s * .5), d });
+    (pine ? pines : round).push({ pos: p.clone().add(new THREE.Vector3(0, s * (pine ? 1.5 : 1.25), 0)), scale: new THREE.Vector3(s * .62, s * (pine ? 1.1 : .62), s * .62),
+      rot: r2() * 6, color: pine ? PINES[(r2() * 3) | 0] : r2() < .06 ? '#ffb3c7' : GREENS[(r2() * 5) | 0], d });
   }
   const ROOFS = ['#ff6b81', '#ff9f43', '#4fb8ff', '#a98bff'], WALLS = ['#fff7ec', '#ffe9f0', '#eef7ff', '#fff3d1'];
-  for (let v = 0, tries = 0; v < 7 && tries < 400; tries++) {
-    const x = X0 + (.1 + .8 * rnd()) * (X1 - X0), y = Y0 + (.1 + .8 * rnd()) * (Y1 - Y0), rel = (groundH(x, y) - zmin) / zr;
-    if (rel < wlRel + .03 || rel > .5 || slope(x, y) > .12 || !free(x, y, 700)) continue;
+  for (let v = 0, tries = 0; v < 6 && tries < 400; tries++) {
+    const x = X0 + (.1 + .8 * r2()) * (X1 - X0), y = Y0 + (.1 + .8 * r2()) * (Y1 - Y0), rel = (groundH(x, y) - zmin) / zr;
+    if (rel < wlRel + .03 || rel > .5 || slope(x, y) > .12) continue;
     v++;
-    for (let k = 0, n = 7 + (rnd() * 7 | 0); k < n; k++) {
-      const hx = x + (rnd() - .5) * 800, hy = y + (rnd() - .5) * 800, hz = groundH(hx, hy);
+    for (let k = 0, n = 7 + (r2() * 7 | 0); k < n; k++) {
+      const hx = x + (r2() - .5) * 800, hy = y + (r2() - .5) * 800, hz = groundH(hx, hy);
       if ((hz - zmin) / zr < wlRel + .02 || slope(hx, hy) > .18) continue;
-      const s = .055 + rnd() * .035, p = toScene(hx, hy, hz), rot = rnd() * Math.PI, d = Math.hypot(p.x - CX, p.z - CZ);
-      walls.push({ pos: p.clone().add(new THREE.Vector3(0, s * .45, 0)), scale: new THREE.Vector3(s, s * .9, s * 1.25), rot, color: WALLS[(rnd() * 4) | 0], d });
-      roofs.push({ pos: p.clone().add(new THREE.Vector3(0, s * 1.15, 0)), scale: new THREE.Vector3(s * .95, s * .55, s * 1.2), rot: rot + Math.PI / 4, color: ROOFS[(rnd() * 4) | 0], d });
+      const s = .055 + r2() * .035, p = toScene(hx, hy, hz), rot = r2() * Math.PI, d = Math.hypot(p.x - CX, p.z - CZ);
+      walls.push({ pos: p.clone().add(new THREE.Vector3(0, s * .45, 0)), scale: new THREE.Vector3(s, s * .9, s * 1.25), rot, color: WALLS[(r2() * 4) | 0], d });
+      roofs.push({ pos: p.clone().add(new THREE.Vector3(0, s * 1.15, 0)), scale: new THREE.Vector3(s * .95, s * .55, s * 1.2), rot: rot + Math.PI / 4, color: ROOFS[(r2() * 4) | 0], d });
     }
   }
-  const all = [trunks, round, pines, walls, roofs].flat();
-  all.forEach(it => it.delay = .35 + it.d / D * 1.4 + Math.random() * .25);
+  [trunks, round, pines, walls, roofs].flat().forEach(it => it.delay = .3 + it.d / D * 1.3 + Math.random() * .25);
   instanced(new THREE.CylinderGeometry(.5, .7, 1, 6), toon('#b07a52'), trunks);
   instanced(new THREE.IcosahedronGeometry(1, 0), toon('#ffffff'), round);
   instanced(new THREE.ConeGeometry(1, 2, 7), toon('#ffffff'), pines);
   instanced(new THREE.BoxGeometry(1, 1, 1), toon('#ffffff'), walls);
   instanced(new THREE.ConeGeometry(.9, 1, 4), toon('#ffffff'), roofs);
-}
-
-// clouds drifting around the board
-const clouds = [];
-{
-  const geo = mergeGeometries([[0, 0, 0, 1], [1.1, -.15, .2, .75], [-1.05, -.2, -.1, .7], [.4, .45, -.1, .7], [-.5, .35, .25, .6]].map(([x, y, z, r]) =>
-    new THREE.IcosahedronGeometry(r, 1).translate(x, y, z)));
-  const mat = toon('#ffffff', { emissive: '#ffffff', emissiveIntensity: .25 });
+  const cg = mergeGeometries([[0, 0, 0, 1], [1.1, -.15, .2, .75], [-1.05, -.2, -.1, .7], [.4, .45, -.1, .7], [-.5, .35, .25, .6]].map(([x, y, z, r]) => new THREE.IcosahedronGeometry(r, 1).translate(x, y, z)));
+  const cm = toon('#ffffff', { emissive: '#ffffff', emissiveIntensity: .25 });
   for (let k = 0; k < 7; k++) {
-    const c = new THREE.Mesh(geo, mat), a = k / 7 * Math.PI * 2;
-    c.userData = { a, r: D * (.55 + .2 * (k % 3)), y: D * (.23 + .05 * (k % 2)), s: .45 + .25 * ((k * 7) % 3) / 2 };
-    c.scale.setScalar(c.userData.s * D / 14);
-    clouds.push(c); scene.add(c);
+    const c = new THREE.Mesh(cg, cm);
+    c.userData = { a: k / 7 * Math.PI * 2, r: D * (.55 + .2 * (k % 3)), y: D * (.23 + .05 * (k % 2)) };
+    c.scale.setScalar((.45 + .25 * ((k * 7) % 3) / 2) * D / 14);
+    clouds.push(c); board.add(c);
   }
+}
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+function setInst(im, k, it, f) { _q.setFromAxisAngle(_up, it.rot ?? 0); _s.copy(it.scale).multiplyScalar(Math.max(f, 1e-4)); im.setMatrixAt(k, _m.compose(it.pos, _q, _s)); }
+function instanced(geo, mat, items) {
+  const im = new THREE.InstancedMesh(geo, mat, Math.max(items.length, 1));
+  im.count = items.length; im.castShadow = true; im.receiveShadow = true;
+  items.forEach((it, k) => { if (it.color) im.setColorAt(k, new THREE.Color(it.color)); popItems.push([im, k, it]); setInst(im, k, it, REDUCED ? 1 : 0); });
+  board.add(im);
 }
 
 // ---------- shared point sprites (trails, sparkles, confetti) ----------
 function radialTex(stops) {
   const cv = Object.assign(document.createElement('canvas'), { width: 64, height: 64 }), g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  stops.forEach(([k, c]) => gr.addColorStop(k, c));
-  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  stops.forEach(([k, c]) => gr.addColorStop(k, c)); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-const dotTex = radialTex([[0, 'rgba(255,255,255,1)'], [.55, 'rgba(255,255,255,1)'], [.75, 'rgba(255,255,255,.5)'], [1, 'rgba(255,255,255,0)']]);
 const pointsMat = new THREE.ShaderMaterial({
-  uniforms: { map: { value: dotTex }, scale: { value: 1 } },
+  uniforms: { map: { value: radialTex([[0, 'rgba(255,255,255,1)'], [.55, 'rgba(255,255,255,1)'], [.75, 'rgba(255,255,255,.5)'], [1, 'rgba(255,255,255,0)']]) }, scale: { value: 1 } },
   vertexShader: `attribute float size; attribute vec4 rgba; varying vec4 vC; uniform float scale;
     void main() { vC = rgba; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * scale / -mv.z; gl_Position = projectionMatrix * mv; }`,
   fragmentShader: `uniform sampler2D map; varying vec4 vC;
@@ -448,32 +424,30 @@ function pointCloud(n) {
 }
 const PART_N = 600, parts = pointCloud(PART_N), pl = Array.from({ length: PART_N }, () => ({ life: 0 }));
 let partHead = 0;
-function burst(at, colors, n, size, speed, up = 1) {
+function burst(at, colors, n, size, speed) {
   if (REDUCED) n = Math.ceil(n / 3);
   for (let k = 0; k < n; k++) {
     const p = pl[partHead = (partHead + 1) % PART_N], a = Math.random() * Math.PI * 2, e = Math.random() * .9 + .2;
     Object.assign(p, { life: 1, max: .8 + Math.random() * .6, x: at.x, y: at.y, z: at.z, size: size * (.6 + Math.random() * .7), c: srgb(colors[k % colors.length]),
-      vx: Math.cos(a) * Math.cos(e) * speed, vy: Math.sin(e) * speed * up + speed * .4, vz: Math.sin(a) * Math.cos(e) * speed });
+      vx: Math.cos(a) * Math.cos(e) * speed, vy: Math.sin(e) * speed + speed * .4, vz: Math.sin(a) * Math.cos(e) * speed });
   }
 }
 function stepParticles(dt) {
   const P = parts.geometry.attributes;
   for (let k = 0; k < PART_N; k++) {
     const p = pl[k];
-    if (p.life > 0) {
-      p.life -= dt / p.max; p.vy -= dt * p.size * 6; const fr = Math.exp(-dt * 2.2);
-      p.vx *= fr; p.vz *= fr; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
-    }
+    if (p.life > 0) { p.life -= dt / p.max; p.vy -= dt * p.size * 6; const fr = Math.exp(-dt * 2.2); p.vx *= fr; p.vz *= fr; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; }
     const a = Math.max(p.life, 0);
     P.position.setXYZ(k, p.x ?? 0, p.y ?? 0, p.z ?? 0);
-    P.size.setX(k, a > 0 ? p.size * (0.4 + .6 * Math.sin(Math.min(a * 3, 1) * Math.PI / 2)) : 0);
+    P.size.setX(k, a > 0 ? p.size * (.4 + .6 * Math.sin(Math.min(a * 3, 1) * Math.PI / 2)) : 0);
     P.rgba.setXYZW(k, ...(p.c ?? [1, 1, 1]), Math.min(a * 2.2, 1));
   }
   P.position.needsUpdate = P.size.needsUpdate = P.rgba.needsUpdate = true;
 }
 
 // ---------- birds ----------
-const SPH = new THREE.SphereGeometry(1, 20, 14), CONE = new THREE.ConeGeometry(1, 1, 12), CYL = new THREE.CylinderGeometry(1, 1, 1, 8);
+const SPH = new THREE.SphereGeometry(1, 20, 14), CONE = new THREE.ConeGeometry(1, 1, 12), CYL = new THREE.CylinderGeometry(1, 1, 1, 8), BOX = new THREE.BoxGeometry(1, 1, 1);
+const SHARED = new Set([SPH, CONE, CYL, BOX]);
 const shadowTex = radialTex([[0, 'rgba(59,47,92,.55)'], [.6, 'rgba(59,47,92,.25)'], [1, 'rgba(59,47,92,0)']]);
 const haloTex = radialTex([[0, 'rgba(255,255,255,.9)'], [.4, 'rgba(255,255,255,.45)'], [1, 'rgba(255,255,255,0)']]);
 function makeBird(sp, color) {
@@ -496,7 +470,7 @@ function makeBird(sp, color) {
     add(body, SPH, new THREE.MeshBasicMaterial({ color: '#ff9fb7', transparent: true, opacity: .85 }), [sx * .27, .22, -.8], [.08, .05, .04], null, false);
   }
   add(body, CONE, toon(sp.beak), [0, .27, -.9 - sp.beakLen / 2], [sp.beakR, sp.beakLen, sp.beakR], [-Math.PI / 2, 0, 0]);
-  const scarf = add(body, new THREE.TorusGeometry(1, .22, 8, 24), toon(color), [0, .13, -.42], [.31, .31, .31], [.25, 0, 0]);
+  add(body, new THREE.TorusGeometry(1, .22, 8, 24), toon(color), [0, .13, -.42], [.31, .31, .31], [.25, 0, 0]);
   const tail = add(body, SPH, toon(color), [.12, .02, -.32], [.07, .05, .16], [0, .5, 0]);
   if (sp.fork) for (const sx of [-1, 1]) add(body, SPH, toon(sp.tip), [sx * .1, .03, .9], [.06, .03, .44], [0, sx * .35, 0]);
   else add(body, SPH, toon(sp.tip ?? sp.wing), [0, .05, .82], [.2, .045, .4], [.12, 0, 0]);
@@ -504,11 +478,9 @@ function makeBird(sp, color) {
   const wings = [];
   for (const sx of [-1, 1]) {
     const pivot = new THREE.Group(), sweep = new THREE.Group();
-    pivot.position.set(sx * .36, .12, -.1);
-    sweep.rotation.y = -sx * (sp.sweep ?? 0);
+    pivot.position.set(sx * .36, .12, -.1); sweep.rotation.y = -sx * (sp.sweep ?? 0);
     pivot.add(sweep); body.add(pivot);
-    const wm = toon(sp.wing, sp.blur ? { transparent: true, opacity: .6 } : {});
-    add(sweep, SPH, wm, [sx * sp.span * .47, 0, .05], [sp.span / 2, .045, sp.chord / 2]);
+    add(sweep, SPH, toon(sp.wing, sp.blur ? { transparent: true, opacity: .6 } : {}), [sx * sp.span * .47, 0, .05], [sp.span / 2, .045, sp.chord / 2]);
     if (sp.tip) add(sweep, SPH, toon(sp.tip), [sx * sp.span * .82, 0, .08], [sp.span * .16, .05, sp.chord * .36], null, false);
     if (sp.blur) {
       const fan = new THREE.Mesh(new THREE.CircleGeometry(sp.span * .95, 24, sx > 0 ? -.85 : Math.PI - .85, 1.7),
@@ -522,98 +494,67 @@ function makeBird(sp, color) {
   const hit = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));
   root.add(hit);
   const size = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3());
-  return { root, body, wings, scarf, tail, halo, hit, ol, norm: Math.max(size.x, size.z) };
+  return { root, body, wings, tail, halo, hit, ol, norm: Math.max(size.x, size.z) };
 }
 
-const birds = {};
-const trailN = 34, pathMats = [];
-for (const id of objIds) {
-  const sp = speciesOf(id), color = idColor(id), tr = B.truth[id], b = makeBird(sp, color);
-  b.id = id; b.sp = sp; b.color = color; b.phase = Math.random() * 6; b.effort = .4; b.hl = 0; b.pop = REDUCED ? 1 : 0; b.scaleV = 0; b.hover = 0;
-  b.hit.userData.bird = id;
-  scene.add(b.root);
-  b.shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-  b.shadow.rotation.x = -Math.PI / 2; scene.add(b.shadow);
-  b.trail = pointCloud(trailN);
-  const pts = tr.x.map((x, i) => toScene(x, tr.y[i], tr.z[i]));
-  const lg = new LineGeometry(); lg.setPositions(pts.flatMap(p => p.toArray()));
-  const lm = new LineMaterial({ color, linewidth: 4, transparent: true, opacity: 0, dashed: true, dashSize: .16, gapSize: .1, depthWrite: false });
-  lm.resolution.set(innerWidth, innerHeight); pathMats.push(lm);
-  b.path = new Line2(lg, lm); b.path.computeLineDistances(); b.path.visible = false; b.path.renderOrder = 2; scene.add(b.path);
-  // fix ring on the ground where the receivers think the bird is, sized by the estimated error
-  b.ring = new THREE.Group();
-  const rm = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .95, depthTest: false, side: THREE.DoubleSide });
-  const dm = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .16, depthTest: false, side: THREE.DoubleSide });
-  for (const [geo, m] of [[new THREE.RingGeometry(.9, 1, 64), rm], [new THREE.CircleGeometry(.9, 64), dm]]) { const me = new THREE.Mesh(geo, m); me.rotation.x = -Math.PI / 2; me.renderOrder = 6; b.ring.add(me); }
-  b.ring.visible = false; b.ringS = 0; b.ringV = 0; b.ringTarget = 0; b.ringPos = new THREE.Vector3(); scene.add(b.ring);
-  birds[id] = b;
-}
-
-// ---------- birdwatcher huts (receivers) ----------
-const HUTC = ['#c8f4dd', '#ffe1ec', '#e3dcff', '#d8efff', '#fff1c7'];
-const huts = {};
-B.sensors.forEach((s, k) => {
+// ---------- stations (huts) ----------
+let stations = [];
+function makeHut(k) {
   const g = new THREE.Group(), ol = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide }), wood = toon('#c98b5a'), wood2 = toon('#e5ad73');
   const add = (parent, geo, mat, p, sc, r, outline = true) => {
     const m = new THREE.Mesh(geo, mat); m.position.set(...p); m.scale.set(...sc); if (r) m.rotation.set(...r); m.castShadow = true;
     if (outline) { const o = new THREE.Mesh(geo, ol); o.scale.setScalar(1.08); m.add(o); }
     parent.add(m); return m;
   };
-  const BOX = new THREE.BoxGeometry(1, 1, 1);
   for (const [lx, lz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) add(g, CYL, wood, [lx * .075, .11, lz * .075], [.014, .22, .014], null, false);
   add(g, BOX, wood2, [0, .232, 0], [.25, .028, .25]);
   add(g, BOX, toon(HUTC[k % HUTC.length]), [0, .31, .03], [.17, .13, .15]);
   add(g, BOX, toon('#5a4a7a'), [0, .32, -.046], [.07, .05, .01], null, false);
-  add(g, CONE, toon(['#ff6b81', '#4fb8ff', '#a98bff', '#ff9f43'][k % 4]), [0, .44, .03], [.16, .12, .16], [0, Math.PI / 4, 0]);
+  add(g, CONE, toon(['#ff6b81', '#4fb8ff', '#a98bff', '#ff9f43', '#3ddc97', '#ffc23c'][k % 6]), [0, .44, .03], [.16, .12, .16], [0, Math.PI / 4, 0]);
   add(g, CYL, wood, [.1, .5, .1], [.006, .2, .006], null, false);
   const flag = add(g, BOX, toon('#ffc23c'), [.135, .57, .1], [.07, .045, .006], null, false);
   const bino = new THREE.Group(); bino.position.set(0, .275, 0); g.add(bino);
   for (const sx of [-1, 1]) add(bino, CYL, toon(INK), [sx * .024, 0, -.15], [.02, .07, .02], [Math.PI / 2, 0, 0]);
   add(bino, SPH, new THREE.MeshBasicMaterial({ color: '#9fe3ff' }), [0, 0, -.19], [.045, .02, .01], null, false);
-  const beams = {};
-  for (const oid of objIds) {
-    const geo = new THREE.ConeGeometry(.24, 2.4, 24, 1, true).translate(0, -1.2, 0).rotateX(Math.PI / 2);
-    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: idColor(oid), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
-    m.position.set(0, .275, 0); m.visible = false; g.add(m);
-    beams[oid] = { m, a: 0 };
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(.5, .75, .5), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = .32; g.add(hit);
+  return { g, bino, flag, hit };
+}
+function addStation(lat, lon) {
+  const k = stations.length, m = makeHut(k), st = { lat, lon, ...m, pop: REDUCED ? 1 : 0, v: 0, beams: {}, lift: 0 };
+  st.hit.userData.station = st;
+  scene.add(st.g); stations.push(st);
+  [st.signO, st.sign] = el('sign', `${k + 1}`, `--hc:${HUTC[k % HUTC.length]}`);
+  placeStation(st);
+  return st;
+}
+function placeStation(st) {
+  const [x, y] = xyOf(st.lat, st.lon);
+  st.x = x; st.y = y; st.g.position.copy(toScene(x, y, groundH(x, y)));
+  st.ang = -Math.atan2(CX - st.g.position.x, -(CZ - st.g.position.z));   // idle: look toward the middle of the board
+}
+function clearStations() { for (const st of stations) { scene.remove(st.g); disposeKeep(st.g); st.signO.remove(); } stations = []; }
+const disposeKeep = o => o.traverse(c => { if (c.geometry && !SHARED.has(c.geometry)) c.geometry.dispose(); (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m?.dispose?.()); });
+function renumber() {
+  const keep = stations.map(s => [s.lat, s.lon]);
+  clearStations(); keep.forEach(([la, lo]) => { const s = addStation(la, lo); s.pop = 1; });
+}
+function defaultHuts() {
+  const [w, s, e, n] = AREA.bbox, pts = [];
+  for (const [fx, fy] of [[.3, .3], [.72, .38], [.48, .72]]) {
+    let lat = s + fy * (n - s), lon = w + fx * (e - w);
+    for (let k = 0; k < 10; k++) {   // nudge toward the middle until the hut stands on dry ground
+      const [x, y] = xyOf(lat, lon); if (groundH(x, y) > wl + zr * .02) break;
+      lat += ((s + n) / 2 - lat) * .2; lon += ((w + e) / 2 - lon) * .2;
+    }
+    pts.push([lat, lon]);
   }
-  g.position.copy(toScene(s.x, s.y, groundH(s.x, s.y)));
-  g.scale.setScalar(REDUCED ? 1 : .001);
-  scene.add(g);
-  huts[s.id] = { s, g, bino, flag, beams, ang: -Math.atan2(CX - g.position.x, -(CZ - g.position.z)),  // idle: look toward the middle of the board
-    pop: REDUCED ? 1 : 0, v: 0, lastSay: -9, color: HUTC[k % HUTC.length] };
-});
+  return pts;
+}
 
-// ---------- HUD: roster, watchers, labels, bubbles ----------
-$('#sub').textContent = `${S.name} · ${S.region ?? ''}`;
-$('#nbirds').textContent = objIds.length;
-$('#roster').classList.toggle('compact', objIds.length > 4);
+// ---------- HUD labels ----------
 const labels = $('#labels');
 const el = (cls, html, style = '') => { const o = document.createElement('div'), i = document.createElement('div'); i.className = cls; i.innerHTML = html; if (style) i.style.cssText = style; o.append(i); labels.append(o); return [o, i]; };
-for (const id of objIds) {
-  const b = birds[id], sp = b.sp;
-  const card = document.createElement('button');
-  card.className = 'bird'; card.style.setProperty('--id', b.color); card.title = `${sp.name} ${id} plays: ${B.drones?.[id]?.name ?? typeOf(id)}`;
-  card.innerHTML = `<span class="av">${birdSVG(sp.body === '#ffffff' ? '#f4f1ff' : sp.body, sp.head === '#ffffff' ? '#f4f1ff' : sp.head, sp.wing === '#ffffff' ? '#e8e3ff' : sp.wing, sp.beak)}</span>
-    <span class="meta"><div class="nm">${sp.name} <span style="color:var(--faint)">${id}</span></div><div class="cl">plays: ${B.drones?.[id]?.name ?? typeOf(id)}</div><div class="cl live"></div><span class="chip">Hiding</span></span>`;
-  card.onmouseenter = () => setHover(id); card.onmouseleave = () => setHover(null);
-  card.onfocus = () => setHover(id); card.onblur = () => setHover(null);
-  card.onclick = () => { sfx.pop(); following === id ? overview() : follow(id); };
-  $('#birds').append(card);
-  b.card = card; b.chip = card.querySelector('.chip'); b.live = card.querySelector('.live');
-  [b.tagO, b.tag] = el('tag', `${sp.name}`, `--id:${b.color}`);
-  [b.sayO, b.say] = el('say spot', '');
-}
-for (const s of B.sensors) {
-  const h = huts[s.id], row = document.createElement('div');
-  row.className = 'hut'; row.style.setProperty('--hc', h.color);
-  row.innerHTML = `<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="14" r="4"/><circle cx="17" cy="14" r="4"/><path d="M11 14h2M5 10l2-5h3l1 5M19 10l-2-5h-3l-1 5"/></svg></span>
-    <span><div class="nm">Hut ${s.id}</div><div class="sub">scanning…</div></span><span class="n">0</span>`;
-  $('#huts').append(row);
-  h.sub = row.querySelector('.sub'); h.n = row.querySelector('.n'); h.shown = 0;
-  [h.signO] = el('sign', s.id);
-  [h.sayO, h.say] = el('say', '');
-}
 
 // ---------- sounds: tiny synth blips, off until the player turns them on ----------
 let ac = null, soundOn = false, lastSfx = 0;
@@ -627,9 +568,11 @@ function tone(f0, f1, dur, type = 'sine', vol = .06, when = 0) {
 const limited = fn => (...a) => { const now = performance.now(); if (now - lastSfx < 110) return; lastSfx = now; fn(...a); };
 const sfx = {
   pop: () => tone(480, 900, .1, 'sine', .07),
-  chirp: limited(() => { tone(1900, 2700, .07, 'sine', .045); tone(2200, 3200, .08, 'sine', .04, .09); }),
-  blip: limited(() => tone(820, 1150, .07, 'triangle', .03)),
+  plop: () => tone(300, 620, .12, 'sine', .07),
+  chirp: limited(() => { tone(1900, 2700, .07, 'sine', .05); tone(2200, 3200, .08, 'sine', .045, .09); tone(2600, 3600, .09, 'sine', .04, .19); }),
+  ping: limited(() => tone(900, 1100, .06, 'triangle', .025)),
   tick: () => tone(1500, 1300, .025, 'triangle', .02),
+  fanfare: () => [523, 659, 784, 1047].forEach((f, k) => tone(f, f * 1.01, .18, 'triangle', .06, k * .12)),
 };
 $('#sound').onclick = () => {
   soundOn = !soundOn;
@@ -640,56 +583,202 @@ $('#sound').onclick = () => {
   sfx.pop();
 };
 
-// ---------- time, playback, scrubber ----------
+// ---------- game state and URL ----------
+const q = new URLSearchParams(location.search);
+let mode = 'boot', nBirds = clamp(+q.get('birds') || 6, 1, 12), seed = null, R = null;   // R: the current round's bundle and derived data
+let t = 0, playing = false, speed = ROUND_SPEED, dragging = false, lastI = -1, lastURL = 0;
+const setMode = m => { mode = m; document.body.dataset.mode = m; };
+const hutsParam = () => stations.map(s => `${s.lat.toFixed(5)},${s.lon.toFixed(5)}`).join(';');
+function syncURL() {
+  const p = new URLSearchParams();
+  if (AREA) p.set('area', AREA.id);
+  if (stations.length) p.set('huts', hutsParam());
+  if (R) { p.set('birds', nBirds); p.set('seed', seed); p.set('t', Math.floor(t)); if (playing) p.set('play', '1'); if (following) p.set('bird', following); }
+  history.replaceState(null, '', `?${p.toString().replaceAll('%2C', ',').replaceAll('%3B', ';')}`);
+}
+$('#toPro').onclick = e => {
+  e.preventDefault();
+  location.href = R ? `../viewer/?game=${AREA.id}&huts=${hutsParam()}&birds=${nBirds}&seed=${seed}&t=${Math.floor(t)}${playing ? '&play=1' : ''}` : `../viewer/?area=${AREA?.id ?? 'kaniv'}`;
+};
+const updateBirdCount = () => { $('#bcount').textContent = `${nBirds} bird${nBirds > 1 ? 's' : ''}`; };
+$('#bminus').onclick = () => { nBirds = Math.max(1, nBirds - 1); updateBirdCount(); sfx.tick(); };
+$('#bplus').onclick = () => { nBirds = Math.min(12, nBirds + 1); updateBirdCount(); sfx.tick(); };
+updateBirdCount();
+$('#where').onclick = () => { sfx.pop(); showPicker(); };
+
+// ---------- area pick and placement ----------
+let AREAS = [];
+async function loadArea(a, huts) {
+  const d = await getJSON(`/api/terrain?area=${a.id}&cells=128`);
+  AREA = a; T = d.terrain; F = d.frame;
+  endRound(); clearStations();
+  buildBoard(a.id.length * 97 + 11);
+  (huts?.length ? huts : defaultHuts()).slice(0, MAX_HUTS).forEach(([la, lo]) => addStation(la, lo));
+  $('#sub').textContent = `${a.name} · ${a.region}`;
+  camera.position.copy(REDUCED ? home.pos : home.target.clone().add(new THREE.Vector3(.5, .9, .35).normalize().multiplyScalar(D * 3.1)));
+  controls.target.copy(home.target);
+  flyTo(home.pos.clone(), home.target.clone(), 2.4);
+  toPlacement();
+}
+function toPlacement() {
+  endRound(); setMode('place'); updatePlace(); syncURL();
+  $('#place').classList.remove('enter'); void $('#place').offsetWidth; $('#place').classList.add('enter');
+}
+const updatePlace = () => {
+  $('#placeTitle').textContent = `Place your huts · ${stations.length} / ${MAX_HUTS}`;
+  $('#release').disabled = !stations.length;
+};
+function showPicker() {
+  $('#areas').innerHTML = '';
+  for (const a of AREAS) {
+    const [e, bg] = AREA_LOOK[a.id] ?? ['🐦', '#fff1c7'], b = document.createElement('button');
+    b.className = 'area'; b.style.setProperty('--bg', bg);
+    b.innerHTML = `<span class="e">${e}</span><b>${a.name}</b><small>${a.region}</small>`;
+    b.onclick = async () => { sfx.pop(); $('#picker').classList.remove('on'); if (a.id === AREA?.id) return; try { await loadArea(a); } catch (err) { toast(`Could not load ${a.name}: ${err.message}`); showPicker(); } };
+    $('#areas').append(b);
+  }
+  $('#picker').classList.add('on');
+  setTimeout(() => $('#areas .area')?.focus(), 50);
+}
+$('#release').onclick = async () => {
+  if (!stations.length) return;
+  sfx.pop();
+  await startRound(Math.floor(Math.random() * 1e6), 0, true);
+};
+
+// ---------- the round ----------
+async function startRound(newSeed, t0, play) {
+  setMode('loading'); $('#release').classList.add('busy');
+  try {
+    const B = await getJSON('/api/game', { area: AREA.id, huts: stations.map(s => [s.lat, s.lon]), birds: nBirds, seed: newSeed });
+    seed = newSeed; setupRound(B);
+    t = clamp(t0, 0, R.N - 1); lastI = -1; setPlaying(play);
+    setMode('round');
+    for (const id of ['#bar', '#score']) { $(id).classList.remove('enter'); void $(id).offsetWidth; $(id).classList.add('enter'); }
+    flyTo(home.pos.clone(), home.target.clone(), 1.1);
+    resize(); syncURL();
+    if (q.get('bird') && R.birds[q.get('bird')]) { follow(q.get('bird')); q.delete('bird'); }
+  } catch (err) { toast(`Could not start the round: ${err.message}`); setMode('place'); }
+  finally { $('#release').classList.remove('busy'); }
+}
+function endRound() {
+  if (!R) return;
+  for (const b of Object.values(R.birds)) {
+    for (const o of [b.root, b.shadow, b.trail, b.path]) { scene.remove(o); disposeKeep(o); }
+    for (const e of [b.tagO, b.sayO, b.checkO, b.pingO]) e.remove();
+  }
+  for (const st of stations) { for (const bm of Object.values(st.beams)) { st.g.remove(bm.m); disposeKeep(bm.m); } st.beams = {}; }
+  $('#stations').innerHTML = ''; $('#scoreDots').innerHTML = '';
+  R = null; following = null; hovered = null; playing = false; $('#endcard').classList.remove('on');
+}
+const pathMats = [];
+function setupRound(B) {
+  endRound();
+  const N = B.t.length, objIds = Object.keys(B.truth);
+  const spawn = Object.fromEntries(objIds.map(id => [id, B.spawn?.[id] ?? [0, N - 1]]));
+  const fixAt = Object.fromEntries(objIds.map(id => [id, new Map((B.fused[id] ?? []).map(f => [f[0], f]))]));
+  const caughtAt = Object.fromEntries(objIds.map(id => [id, (B.fused[id] ?? []).reduce((m, f) => Math.min(m, f[0]), Infinity)]));
+  R = { B, N, objIds, spawn, fixAt, caughtAt, birds: {}, shownCaught: -1 };
+  pathMats.length = 0;
+  objIds.forEach((id, k) => {
+    const sp = SPECIES[SPECIES_OF[B.drones?.[id]?.type]] ?? SPECIES.pigeon, color = ID[k % ID.length], tr = B.truth[id], b = makeBird(sp, color);
+    Object.assign(b, { id, sp, color, phase: Math.random() * 6, effort: .4, hl: 0, fk: 0, pop: 0 });
+    b.hit.userData.bird = id; b.root.visible = false; scene.add(b.root);
+    b.shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    b.shadow.rotation.x = -Math.PI / 2; scene.add(b.shadow);
+    b.trail = pointCloud(22);
+    const [s0, s1] = spawn[id], pts = [];
+    for (let i = s0; i <= s1; i++) pts.push(...toScene(tr.x[i], tr.y[i], tr.z[i]).toArray());
+    const lg = new LineGeometry(); lg.setPositions(pts.length >= 6 ? pts : [0, 0, 0, 0, 0, 0]);
+    const lm = new LineMaterial({ color, linewidth: 4, transparent: true, opacity: 0, dashed: true, dashSize: .16, gapSize: .1, depthWrite: false });
+    lm.resolution.set(innerWidth, innerHeight); pathMats.push(lm);
+    b.path = new Line2(lg, lm); b.path.computeLineDistances(); b.path.visible = false; b.path.renderOrder = 2; scene.add(b.path);
+    [b.tagO, b.tag] = el('tag', '', `--id:${color}`);
+    [b.sayO, b.say] = el('say', 'Caught! +1');
+    [b.checkO, b.check] = el('check', '✓');
+    [b.pingO, b.ping] = el('ping', '?');
+    R.birds[id] = b;
+    const dot = document.createElement('i'); dot.style.setProperty('--c', color); dot.title = sp.name; $('#scoreDots').append(dot); b.dot = dot;
+  });
+  // per station: first detection of each bird (for "birds seen") and the SNR sparkline, clipped to "so far"
+  B.sensors.forEach((s, k) => {
+    const st = stations[k];
+    if (!st) return;
+    st.id = s.id; st.thr = s.threshold_db; st.first = {};
+    const card = document.createElement('div');
+    card.className = 'st'; card.style.setProperty('--hc', HUTC[k % HUTC.length]);
+    const yOf = v => (40 - (clamp(v, -10, 40) + 10) / 50 * 40).toFixed(1);
+    let lines = '';
+    for (const id of objIds) {
+      const L = B.links[`${s.id}|${id}`]; if (!L) continue;
+      const [s0, s1] = spawn[id], pts = [];
+      for (let i = s0; i <= s1; i++) pts.push(`${i},${yOf(L.snr[i])}`);
+      lines += `<polyline points="${pts.join(' ')}" fill="none" stroke="${R.birds[id].color}" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+      const fd = L.det.findIndex(v => v); if (fd >= 0) st.first[id] = fd;
+      const geo = new THREE.ConeGeometry(.24, 2.4, 24, 1, true).translate(0, -1.2, 0).rotateX(Math.PI / 2);
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: R.birds[id].color, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+      m.position.set(0, .275, 0); m.visible = false; st.g.add(m);
+      st.beams[id] = { m, a: 0, L };
+    }
+    card.innerHTML = `<div class="st-h"><span class="ic">${k + 1}</span><b>Hut ${k + 1}</b><span class="seen"><b>0</b>seen</span></div>
+      <div class="meter" title="Confidence: how far above its detection threshold the signals are right now (0 dB = 0 %, 20 dB or more = 100 %)"><i></i></div>
+      <div class="st-m"><span>confidence</span><span class="pct">–</span></div>
+      <svg viewBox="0 0 ${N} 40" preserveAspectRatio="none" aria-label="Signal strength over time"><defs><clipPath id="clip${k}"><rect x="0" y="0" width="0" height="40"/></clipPath></defs>
+        <line x1="0" x2="${N}" y1="${yOf(s.threshold_db)}" y2="${yOf(s.threshold_db)}" stroke="#7a6f99" stroke-dasharray="4 4" stroke-opacity=".7" vector-effect="non-scaling-stroke"/>
+        <g clip-path="url(#clip${k})">${lines}</g><line class="cur" x1="0" x2="0" y1="0" y2="40" stroke="#3b2f5c" stroke-opacity=".5" vector-effect="non-scaling-stroke"/></svg>`;
+    card.onmouseenter = () => st.lift = 1; card.onmouseleave = () => st.lift = 0;
+    $('#stations').append(card);
+    Object.assign(st, { card, seenEl: card.querySelector('.seen b'), meter: card.querySelector('.meter i'), pct: card.querySelector('.pct'), clip: card.querySelector('rect'), cur: card.querySelector('.cur'), conf: 0, seen: 0 });
+  });
+  $('#scrub').setAttribute('aria-valuemax', N - 1);
+  drawStrip();
+}
+
+// ---------- playback controls ----------
 const ICON = { play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4.2" height="14" rx="1.6"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.6"/></svg>' };
-let t = 0, playing = false, speed = 10, dragging = false, lastI = -1;
-const q = new URLSearchParams(location.search);
-t = clamp(+(q.get('t') ?? 0) || 0, 0, N - 1);
-const setPlaying = on => {
-  playing = on; $('#play').innerHTML = on ? ICON.pause : ICON.play; $('#play').ariaLabel = on ? 'Pause' : 'Play';
-  $('#play').classList.remove('nudge');
-  if (on && t >= N - 1) t = 0;
-};
-setPlaying(false); $('#play').classList.add('nudge');
-$('#play').onclick = () => { sfx.pop(); setPlaying(!playing); };
-for (const s of [1, 10, 30, 60]) {
+function setPlaying(on) { playing = on; $('#play').innerHTML = on ? ICON.pause : ICON.play; $('#play').ariaLabel = on ? 'Pause' : 'Play'; if (on && R && t >= R.N - 1) t = 0; }
+$('#play').onclick = () => { sfx.pop(); setPlaying(!playing); syncURL(); };
+for (const s of [5, 10, 20]) {
   const bt = Object.assign(document.createElement('button'), { className: `btn ghost${s === speed ? ' on' : ''}`, textContent: `${s}×` });
   bt.onclick = () => { speed = s; sfx.pop(); document.querySelectorAll('#speeds .btn').forEach(x => x.classList.toggle('on', x === bt)); };
   $('#speeds').append(bt);
 }
 const scrub = $('#scrub'), thumb = $('#thumb');
-$('#thumbicon').innerHTML = birdSVG('#ff8fa3', '#ff6b81', '#ffd0d8', '#ffb347');
-scrub.setAttribute('aria-valuemax', N - 1);
 let thumbX = 0, lastTickT = 0;
-const tAt = e => { const r = scrub.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width, 0, 1) * (N - 1); };
-scrub.addEventListener('pointerdown', e => { dragging = true; scrub.setPointerCapture(e.pointerId); scrub.classList.add('drag'); t = tAt(e); $('#tbubble').classList.add('on'); sfx.tick(); });
+const tAt = e => { const r = scrub.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width, 0, 1) * ((R?.N ?? 1) - 1); };
+const fmtLeft = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+scrub.addEventListener('pointerdown', e => { if (!R) return; dragging = true; scrub.setPointerCapture(e.pointerId); scrub.classList.add('drag'); t = tAt(e); $('#tbubble').classList.add('on'); sfx.tick(); });
 scrub.addEventListener('pointermove', e => {
+  if (!R) return;
   const g = $('#ghost'), r = scrub.getBoundingClientRect();
-  g.style.left = `${e.clientX - r.left}px`; g.textContent = fmtT(tAt(e)); g.classList.toggle('on', !dragging);
+  g.style.left = `${e.clientX - r.left}px`; g.textContent = `${fmtLeft(R.N - 1 - tAt(e))} left`; g.classList.toggle('on', !dragging);
   if (!dragging) return;
   t = tAt(e);
-  if (Math.abs(t - lastTickT) > N / 40) { lastTickT = t; sfx.tick(); }
+  if (Math.abs(t - lastTickT) > R.N / 40) { lastTickT = t; sfx.tick(); }
 });
-const endDrag = () => { if (!dragging) return; dragging = false; scrub.classList.remove('drag'); $('#tbubble').classList.remove('on'); };
+const endDrag = () => { if (!dragging) return; dragging = false; scrub.classList.remove('drag'); $('#tbubble').classList.remove('on'); syncURL(); };
 scrub.addEventListener('pointerup', endDrag); scrub.addEventListener('pointercancel', endDrag);
 scrub.addEventListener('pointerleave', () => $('#ghost').classList.remove('on'));
 scrub.addEventListener('keydown', e => {
+  if (!R) return;
   const step = e.shiftKey ? 60 : 10;
-  if (e.key === 'ArrowRight') t = Math.min(t + step, N - 1); else if (e.key === 'ArrowLeft') t = Math.max(t - step, 0);
-  else if (e.key === 'Home') t = 0; else if (e.key === 'End') t = N - 1; else return;
-  e.preventDefault(); lastI = Math.floor(t) - 1;
+  if (e.key === 'ArrowRight') t = Math.min(t + step, R.N - 1); else if (e.key === 'ArrowLeft') t = Math.max(t - step, 0);
+  else if (e.key === 'Home') t = 0; else if (e.key === 'End') t = R.N - 1; else return;
+  e.preventDefault();
 });
-// lanes on the track: one per bird, solid where it was spotted, light where only heard
+// one lane per bird on the track: faint while it is in the round, light while heard, solid once there is a fix
 function drawStrip() {
+  if (!R) return;
   const cv = $('#strip'), r = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio, 2);
   cv.width = Math.max(1, r.width * dpr); cv.height = Math.max(1, r.height * dpr);
-  const g = cv.getContext('2d'), lane = cv.height / Math.max(objIds.length, 1), w = cv.width / N;
-  objIds.forEach((id, k) => {
-    for (let i = 0; i < N; i++) {
-      const st = status(id, i);
-      if (st.k === 'hidden') continue;
-      g.globalAlpha = st.k === 'spotted' ? .95 : .3; g.fillStyle = birds[id].color;
+  const g = cv.getContext('2d'), lane = cv.height / Math.max(R.objIds.length, 1), w = cv.width / R.N, { B } = R;
+  R.objIds.forEach((id, k) => {
+    const [s0, s1] = R.spawn[id];
+    g.fillStyle = R.birds[id].color;
+    for (let i = s0; i <= s1; i++) {
+      const fix = R.fixAt[id].has(B.t[i]), heard = B.sensors.some(s => B.links[`${s.id}|${id}`]?.det[i]);
+      g.globalAlpha = fix ? .95 : heard ? .38 : .12;
       g.fillRect(i * w, k * lane + lane * .18, Math.max(w, 1), lane * .64);
     }
   });
@@ -697,235 +786,257 @@ function drawStrip() {
 
 // ---------- hover, follow, camera flights ----------
 let hovered = null, following = null, fly = null;
-const home = (() => {
-  const target = new THREE.Vector3(CX, (zmax - base) * VEX / 2000, CZ), aspect = innerWidth / innerHeight;
-  const dist = D * 1.55 * Math.max(1, 1.25 / aspect);
-  return { target, pos: target.clone().add(new THREE.Vector3(-.36, .72, .6).normalize().multiplyScalar(dist)) };
-})();
 function flyTo(pos, target, dur = 1.1, off = null) { fly = { t: 0, dur: REDUCED ? 0.0001 : dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, off }; }
 function follow(id) {
+  if (!R?.birds[id]) return;
   following = id;
-  const b = birds[id], off = camera.position.clone().sub(controls.target).setLength(Math.min(2.6, camera.position.distanceTo(controls.target)));
+  const b = R.birds[id], off = camera.position.clone().sub(controls.target).setLength(Math.min(2.6, camera.position.distanceTo(controls.target)));
   if (off.y < .8) off.y = .8;
   flyTo(b.root.position.clone().add(off), b.root.position.clone(), 1.2, off);
-  for (const o of Object.values(birds)) o.card.classList.toggle('follow', o.id === id);
-  $('#hint').style.opacity = 0;
 }
-function overview() { following = null; flyTo(home.pos.clone(), home.target.clone(), 1.2); for (const o of Object.values(birds)) o.card.classList.remove('follow'); }
+function overview() { following = null; if (home) flyTo(home.pos.clone(), home.target.clone(), 1.2); }
 $('#overview').onclick = () => { sfx.pop(); overview(); };
-function setHover(id) { hovered = id; for (const b of Object.values(birds)) b.card.classList.toggle('hl', b.id === id); renderer.domElement.style.cursor = id ? 'pointer' : ''; }
-const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(), hits = () => Object.values(birds).map(b => b.hit);
-const pick = e => { ptr.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(ptr, camera); return ray.intersectObjects(hits(), false)[0]?.object.userData.bird ?? null; };
-let downAt = null;
-renderer.domElement.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) setHover(pick(e)); });
-renderer.domElement.addEventListener('pointerdown', e => downAt = [e.clientX, e.clientY]);
-renderer.domElement.addEventListener('pointerup', e => {
-  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
-  const id = pick(e);
-  if (id) { sfx.pop(); follow(id); }
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+const setPtr = e => { ptr.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(ptr, camera); };
+const pickBird = e => { if (!R) return null; setPtr(e); return ray.intersectObjects(Object.values(R.birds).filter(b => b.root.visible).map(b => b.hit), false)[0]?.object.userData.bird ?? null; };
+const pickStation = e => { setPtr(e); return ray.intersectObjects(stations.map(s => s.hit), false)[0]?.object.userData.station ?? null; };
+const pickLand = e => { setPtr(e); return land ? ray.intersectObject(land, false)[0]?.point ?? null : null; };
+// placement gestures: tap land = add, drag a hut = move, tap a hut = remove (captured before the camera controls see them)
+let gesture = null;
+addEventListener('pointerdown', e => {
+  if (e.target !== renderer.domElement) return;
+  gesture = { x: e.clientX, y: e.clientY, moved: false, st: mode === 'place' ? pickStation(e) : null };
+  if (gesture.st) { controls.enabled = false; renderer.domElement.setPointerCapture(e.pointerId); }
+}, true);
+renderer.domElement.addEventListener('pointermove', e => {
+  if (gesture && Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y) > 6) gesture.moved = true;
+  if (gesture?.st && gesture.moved) {
+    const p = pickLand(e);
+    if (p) { [gesture.st.lat, gesture.st.lon] = llOf(p.x * 1000, -p.z * 1000); placeStation(gesture.st); gesture.st.lift = 1; }
+    return;
+  }
+  if (e.pointerType === 'mouse' && !e.buttons) {
+    if (mode === 'place') { const s = pickStation(e); renderer.domElement.style.cursor = s ? 'grab' : 'copy'; stations.forEach(x => x.lift = x === s ? .6 : 0); }
+    else setHover(pickBird(e));
+  }
 });
+addEventListener('pointerup', e => {
+  const g = gesture; gesture = null; controls.enabled = true;
+  if (!g || e.target !== renderer.domElement && !g.st) return;
+  if (g.st) {
+    g.st.lift = 0;
+    if (!g.moved) { const i = stations.indexOf(g.st); stations.splice(i, 1); scene.remove(g.st.g); disposeKeep(g.st.g); g.st.signO.remove(); burst(g.st.g.position, ['#c98b5a', '#ffffff'], 10, .07 * D / 14, .8); renumber(); sfx.plop(); }
+    else sfx.tick();
+    updatePlace(); syncURL(); return;
+  }
+  if (g.moved) return;
+  if (mode === 'place') {
+    const p = pickLand(e);
+    if (!p) return;
+    if (stations.length >= MAX_HUTS) { toast(`${MAX_HUTS} huts is the maximum`); return; }
+    const [la, lo] = llOf(p.x * 1000, -p.z * 1000), st = addStation(la, lo);
+    burst(st.g.position, ['#ffc23c', '#ffffff', HUTC[(stations.length - 1) % HUTC.length]], 14, .07 * D / 14, 1);
+    sfx.pop(); updatePlace(); syncURL();
+  } else if (mode === 'round' || mode === 'end') { const id = pickBird(e); if (id) { sfx.pop(); follow(id); } }
+}, true);
+function setHover(id) { hovered = id; renderer.domElement.style.cursor = id ? 'pointer' : ''; }
 addEventListener('keydown', e => {
-  if (e.code === 'Space' && e.target.tagName === 'BUTTON') return;  // the focused button already clicks itself
+  if (e.code === 'Space' && e.target.tagName === 'BUTTON') return;   // the focused button already clicks itself
   if (e.code !== 'Space' && e.target.closest?.('#scrub')) return;
-  if (e.code === 'Space') { e.preventDefault(); $('#play').classList.add('press'); setTimeout(() => $('#play').classList.remove('press'), 120); $('#play').click(); }
+  if (e.code === 'Space' && R && mode === 'round') { e.preventDefault(); $('#play').click(); }
   else if (e.key === 'Escape') overview();
-  else if (/^[1-9]$/.test(e.key) && objIds[+e.key - 1]) follow(objIds[+e.key - 1]);
+  else if (R && /^[1-9]$/.test(e.key) && R.objIds[+e.key - 1]) follow(R.objIds[+e.key - 1]);
 });
-if (q.get('bird') && birds[q.get('bird')]) setTimeout(() => follow(q.get('bird')), REDUCED ? 0 : 2600);
 
-// ---------- per-second state: chips, watchers, events ----------
-let shownSpotted = 0;
-function onSecond(i, live) {
-  for (const id of objIds) {
-    const b = birds[id], st = status(id, i), prev = i > 0 ? status(id, i - 1).k : 'hidden';
-    b.status = st;
-    const txt = st.k === 'spotted' ? `Spotted · ±${st.fx[3]} m` : st.k === 'heard' ? `Heard by ${st.by.join(', ')}` : 'Hiding';
-    if (b.chip.textContent !== txt) { b.chip.textContent = txt; b.chip.className = `chip ${st.k}`; if (live && st.k !== 'hidden' && prev !== st.k) { b.chip.classList.remove('bump'); void b.chip.offsetWidth; b.chip.classList.add('bump'); } }
-    if (st.k === 'spotted') {
-      b.ringTarget = Math.max(st.fx[3], 60) / 1000; b.ringPos.copy(toScene(st.fx[1], st.fx[2], groundH(st.fx[1], st.fx[2])));
-      if (!b.ring.visible) { b.ring.position.copy(b.ringPos); b.ringS = 0; }
-      b.ring.visible = true;
-      b.say.textContent = `Spotted! ±${st.fx[3]} m`;
-      if (live && prev !== 'spotted') { b.say.classList.add('on'); b.sayUntil = performance.now() + 2600; burst(b.root.position, [b.color, '#ffc23c', '#ffffff', '#3ddc97'], 26, b.root.scale.x * .3, b.root.scale.x * 2.2); sfx.chirp(); }
-    } else b.ringTarget = 0;
-  }
-  for (const s of B.sensors) {
-    const h = huts[s.id], ls = linksOf(s.id), heard = ls.filter(([, L]) => L.det[i]);
-    const key = heard.map(([o]) => o).join();
-    if (h.subKey !== key) { h.subKey = key; h.sub.innerHTML = heard.length ? `hears ${heard.length} bird${heard.length > 1 ? 's' : ''} ${heard.map(([o]) => `<i class="dot" style="background:${birds[o].color}"></i>`).join('')}` : 'scanning…'; }
-    h.target = heard.length ? heard.reduce((a, b) => (b[1].power[i] > a[1].power[i] ? b : a)) : null;
-    for (const [oid, L] of ls) {
-      h.beams[oid].on = !!L.det[i]; h.beams[oid].bearing = L.bearing[i];
-      if (live && L.det[i] && !(i > 0 && L.det[i - 1]) && performance.now() - h.lastSay > 1400) {
-        h.lastSay = performance.now(); h.say.textContent = `I hear a ${birds[oid].sp.name.toLowerCase()}!`; h.say.classList.add('on'); h.sayUntil = performance.now() + 1900;
-        burst(h.g.position.clone().add(new THREE.Vector3(0, .5, 0)), ['#ffc23c', '#ffffff', birds[oid].color], 12, .06, .9); sfx.blip();
-      }
-    }
-    h.goal = heardCum[s.id][i];
-  }
-  const total = objIds.reduce((n, id) => n + fixCum[id][i], 0);
-  if (live && total > Math.round(shownSpotted) + 0.5) { const e = $('#spotted'); e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }
-  spottedGoal = total;
+// ---------- end of round ----------
+const bestKey = () => `skyspotters:best:${AREA.id}:${nBirds}`;
+function showEnd() {
+  setMode('end'); setPlaying(false);
+  const caught = R.objIds.filter(id => R.caughtAt[id] < R.N).length, n = R.objIds.length, ratio = caught / Math.max(n, 1);
+  let best = caught;
+  try { best = Math.max(caught, +localStorage.getItem(bestKey()) || 0); localStorage.setItem(bestKey(), best); } catch { /* private mode: no best score */ }
+  const stars = ratio >= .9 ? 3 : ratio >= .6 ? 2 : ratio > 0 ? 1 : 0;
+  $('#stars').innerHTML = [0, 1, 2].map(k => `<i class="${k < stars ? '' : 'off'}" style="animation-delay:${.15 + k * .15}s">⭐</i>`).join('');
+  $('#endTitle').textContent = caught === n ? `You caught all ${n} birds!` : caught ? `You caught ${caught} of ${n} birds!` : `No birds caught this time`;
+  $('#best').textContent = caught === n ? 'Perfect watch. Can you do it with fewer huts?' : `Best here with ${n} birds: ${best} / ${n} · birds need 2 huts hearing them at once`;
+  $('#endcard').classList.add('on'); sfx.fanfare(); syncURL();
+  setTimeout(() => $('#again').focus(), 400);
 }
-let spottedGoal = 0;
+$('#again').onclick = () => { sfx.pop(); $('#endcard').classList.remove('on'); startRound(Math.floor(Math.random() * 1e6), 0, true); };
+$('#move').onclick = () => { sfx.pop(); $('#endcard').classList.remove('on'); overview(); toPlacement(); };
+
+// ---------- per-second game events ----------
+function onSecond(i, live) {
+  const { B } = R;
+  for (const id of R.objIds) {
+    const b = R.birds[id], [s0, s1] = R.spawn[id], caught = R.caughtAt[id] <= i;
+    if (live && i === s0) { const tr = B.truth[id]; burst(toScene(tr.x[s0], tr.y[s0], tr.z[s0]), ['#ffffff', b.color], 14, .1 * D / 14, .9); sfx.plop(); }
+    if (live && i === R.caughtAt[id]) {
+      b.say.classList.add('on'); b.sayUntil = performance.now() + 1800;
+      burst(b.root.position, [b.color, '#ffc23c', '#ffffff', '#3ddc97'], 30, b.root.scale.x * .32, b.root.scale.x * 2.4); sfx.chirp();
+    }
+    b.check.classList.toggle('on', caught);
+    b.dot.classList.toggle('on', caught);
+    const heard = B.sensors.filter(s => B.links[`${s.id}|${id}`]?.det[i]).map((s, k) => s.id);
+    if (live && !caught && heard.length && !R.fixAt[id].has(B.t[i]) && !(i > 0 && B.sensors.some(s => B.links[`${s.id}|${id}`]?.det[i - 1]))) {
+      b.ping.classList.add('on'); b.pingUntil = performance.now() + 1100; sfx.ping();
+    }
+    b.heardBy = heard.map(sid => `Hut ${B.sensors.findIndex(s => s.id === sid) + 1}`);
+    b.caught = caught; b.inWin = i >= s0 && i <= s1;
+  }
+  for (const st of stations) {
+    if (!st.id) continue;
+    let sum = 0, n = 0, target = null;
+    for (const [id, bm] of Object.entries(st.beams)) {
+      const on = !!bm.L.det[i]; bm.on = on; bm.bearing = bm.L.bearing[i];
+      if (on) { sum += clamp((bm.L.snr[i] - st.thr) / 20, 0, 1); n++; if (!target || bm.L.snr[i] > target.L.snr[i]) target = bm; }
+      if (live && on && !(i > 0 && bm.L.det[i - 1])) burst(st.g.position.clone().add(new THREE.Vector3(0, .5 * st.g.scale.y, 0)), ['#ffc23c', '#ffffff', R.birds[id].color], 8, .05 * D / 14, .7);
+    }
+    st.target = target; st.confGoal = n ? sum / n : 0; st.pct.textContent = n ? `${Math.round(st.confGoal * 100)} %` : '–';
+    const seen = Object.values(st.first).filter(fd => fd <= i).length;
+    if (seen !== st.seen) { st.seen = seen; st.seenEl.textContent = seen; if (live) { st.seenEl.classList.remove('bump'); void st.seenEl.offsetWidth; st.seenEl.classList.add('bump'); } }
+  }
+  const caughtN = R.objIds.filter(id => R.caughtAt[id] <= i).length;
+  if (caughtN !== R.shownCaught) {
+    $('#scoreN').innerHTML = `Caught <b>${caughtN}</b> / ${R.objIds.length}`;
+    if (live && R.shownCaught >= 0) { $('#scoreN').classList.remove('bump'); void $('#scoreN').offsetWidth; $('#scoreN').classList.add('bump'); }
+    R.shownCaught = caughtN;
+  }
+}
 
 // ---------- the frame loop ----------
 const rad = Math.PI / 180, v3 = new THREE.Vector3(), tmp = new THREE.Vector3();
-let last = performance.now(), clock = 0, introT = REDUCED ? 99 : 0;
-camera.position.copy(REDUCED ? home.pos : home.target.clone().add(new THREE.Vector3(.5, .9, .35).normalize().multiplyScalar(D * 3.1)));
-controls.target.copy(home.target);
-if (!REDUCED) flyTo(home.pos.clone(), home.target.clone(), 2.6);
+let last = performance.now(), clock = 0;
 const sizeK = () => 2 * Math.tan(camera.fov * rad / 2) / innerHeight;
+const place = (o, p, dy = 0) => { v3.copy(p).project(camera); const vis = v3.z < 1; o.style.display = vis ? '' : 'none'; if (vis) o.style.transform = `translate3d(${((v3.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - v3.y) / 2 * innerHeight - dy).toFixed(1)}px, 0)`; };
 
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 1 / 20); last = now; clock += dt; introT += dt;
-  if (playing && !dragging) { t += dt * speed; if (t >= N - 1) { t = N - 1; setPlaying(false); } }
-  const i = Math.min(Math.floor(t), N - 1), f = t - i, j = Math.min(i + 1, N - 1);
-  if (i !== lastI) {
-    const live = playing && !dragging && i > lastI && i - lastI < 40;
-    if (live) for (let k = lastI + 1; k < i; k++) onSecond(k, false);
+  requestAnimationFrame(frame);
+  if (!board) return;
+  if (R && mode === 'round' && playing && !dragging) { t += dt * speed; if (t >= R.N - 1) { t = R.N - 1; showEnd(); } }
+  const i = R ? Math.min(Math.floor(t), R.N - 1) : 0, f = t - i, j = R ? Math.min(i + 1, R.N - 1) : 0;
+  if (R && i !== lastI) {
+    const live = mode === 'round' && playing && !dragging && i > lastI && i - lastI < 40;
+    if (live) for (let k = lastI + 1; k < i; k++) onSecond(k, true);
     onSecond(i, live); lastI = i;
   }
+  if (R && now - lastURL > 1500) { lastURL = now; syncURL(); }
 
-  // intro pop-in of trees and houses, fully eased, then never touched again
-  if (introT < 4) {
+  if (introT < 4) {   // pop-in of trees and houses, then never touched again
     const dirty = new Set();
-    for (const [im, k, it] of popItems) { const kk = clamp((introT - it.delay) / .55, 0, 1); if (kk > 0 && kk <= 1 && !it.done) { setInst(im, k, it, ease.outBack(kk)); dirty.add(im); if (kk === 1) it.done = true; } }
+    for (const [im, k, it] of popItems) { const kk = clamp((introT - it.delay) / .55, 0, 1); if (kk > 0 && !it.done) { setInst(im, k, it, ease.outBack(kk)); dirty.add(im); if (kk === 1) it.done = true; } }
     dirty.forEach(im => im.instanceMatrix.needsUpdate = true);
   }
-
-  // camera: scripted flights, then follow the chosen bird with eased tracking
   if (fly) {
     fly.t += dt; const k = ease.inOut(clamp(fly.t / fly.dur, 0, 1));
-    if (following && fly.off) { fly.t1.copy(birds[following].root.position); fly.p1.copy(fly.t1).add(fly.off); }  // land on the moving bird
-    camera.position.lerpVectors(fly.p0, fly.p1, k);
-    controls.target.lerpVectors(fly.t0, fly.t1, k);
+    if (following && fly.off && R) { fly.t1.copy(R.birds[following].root.position); fly.p1.copy(fly.t1).add(fly.off); }   // land on the moving bird
+    camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k);
     if (fly.t >= fly.dur) fly = null;
-  } else if (following) {
-    const goal = birds[following].root.position, step = tmp.copy(goal).sub(controls.target).multiplyScalar(damp(5, dt));
+  } else if (following && R) {
+    const step = tmp.copy(R.birds[following].root.position).sub(controls.target).multiplyScalar(damp(5, dt));
     controls.target.add(step); camera.position.add(step);
   }
   controls.update();
 
-  // birds
   const kpx = sizeK();
-  for (const id of objIds) {
-    const b = birds[id], tr = B.truth[id], L = a => a[i] + (a[j] - a[i]) * f;
-    const x = L(tr.x), y = L(tr.y), z = L(tr.z);
+  if (R) for (const id of R.objIds) {
+    const b = R.birds[id], tr = R.B.truth[id], L = a => a[i] + (a[j] - a[i]) * f, [s0, s1] = R.spawn[id];
+    const x = L(tr.x), y = L(tr.y), z = L(tr.z), inWin = t >= s0 && t <= s1 + .5;
+    // pop in and out with the bird's window in the round
+    b.pop += ((inWin ? 1 : 0) - b.pop) * damp(inWin ? 5 : 8, dt);
+    if (REDUCED) b.pop = inWin ? 1 : 0;
+    const vis = b.pop > .01;
+    b.root.visible = b.shadow.visible = b.trail.visible = vis;
+    for (const e of [b.tagO, b.checkO, b.sayO, b.pingO]) e.style.visibility = vis ? '' : 'hidden';
+    if (!vis) { b.path.visible = false; if (following === id && !inWin) overview(); continue; }
     b.root.position.copy(toScene(x, y, z));
     const hd = tr.h ? tr.h[i] + ((((tr.h[j] - tr.h[i]) % 360) + 540) % 360 - 180) * f : Math.atan2(tr.x[j] - tr.x[i], tr.y[j] - tr.y[i]) / rad;
     b.root.rotation.set((tr.p ? L(tr.p) : 0) * rad, -hd * rad, -(tr.r ? L(tr.r) : 0) * rad, 'YXZ');
-    // flapping effort from the data: climbing, turning, going slow (hover) all work harder
     const spd = Math.hypot(tr.x[j] - tr.x[i], tr.y[j] - tr.y[i]), climb = tr.z[j] - tr.z[i], roll = Math.abs(tr.r ? tr.r[i] : 0);
     const burstK = b.sp.fork ? (Math.sin(clock * .8 + id.length) > .55 ? .7 : 0) : 0;
     const want = clamp(.15 + Math.max(climb, 0) / 3 + roll / 90 + (spd < 3 ? .85 : 0) + burstK + (playing ? 0 : .25), 0, 1);
     b.effort += (want - b.effort) * damp(3, dt);
     const amp = b.sp.glide + (b.sp.flap - b.sp.glide) * b.effort;
     b.phase += dt * Math.PI * 2 * b.sp.freq * (.6 + .6 * b.effort) * (REDUCED ? .35 : 1);
-    const s1 = Math.sin(b.phase), wingA = .12 + amp * s1;
+    const s1w = Math.sin(b.phase), wingA = .12 + amp * s1w;
     for (const [pv, sx] of b.wings) pv.rotation.z = sx * wingA;
     const sq = Math.sin(b.phase * 2) * amp * .7;
     b.body.scale.set(1 - .03 * sq, 1 + .06 * sq, 1 - .03 * sq);
-    b.body.position.y = .05 * s1 * amp;
+    b.body.position.y = .05 * s1w * amp;
     b.body.rotation.x = b.sp.blur ? clamp(1 - spd / 6, 0, 1) * .45 : 0;   // hummingbirds sit upright while hovering
     b.tail.rotation.y = .5 + .35 * Math.sin(clock * 11 + b.phase);
-    // pop in, hover bounce, screen-constant size
-    b.pop = Math.min(b.pop + dt / .7, 1);
-    const popK = introT < 1.6 && !REDUCED ? 0 : ease.outBack(clamp(b.pop, 0, 1));
-    if (introT < 1.6 && !REDUCED) b.pop = 0;
     const hl = hovered === id || following === id;
     b.hl += ((hl ? 1 : 0) - b.hl) * damp(10, dt);
-    b.fk = (b.fk ?? 0) + ((following === id ? 1 : 0) - (b.fk ?? 0)) * damp(4, dt);   // close-up: the followed bird grows
+    b.fk += ((following === id ? 1 : 0) - b.fk) * damp(4, dt);
+    const popK = REDUCED ? b.pop : ease.outBack(clamp(b.pop, 0, 1));
     const dist = camera.position.distanceTo(b.root.position), s = dist * kpx * BIRD_PX / b.norm * b.sp.size * (1 + .3 * b.hl) * (1 + 1.3 * b.fk) * popK;
     b.root.scale.setScalar(Math.max(s, 1e-4));
     b.halo.material.opacity = .85 * b.hl * (.8 + .2 * Math.sin(clock * 5));
     b.ol.color.set(b.hl > .5 ? b.color : INK);
-    // blob shadow on the ground: smaller and lighter the higher the bird
     const gy = toScene(x, y, groundH(x, y)).y, agl = b.root.position.y - gy;
     b.shadow.position.set(b.root.position.x, gy + .012, b.root.position.z);
     b.shadow.scale.setScalar(Math.max(s * 1.3 / (1 + agl * .8), 1e-4));
-    b.shadow.material.opacity = clamp(.9 - agl * .35, .2, .9) * popK;
-    // puffy trail of the last ~30 s
-    const P = b.trail.geometry.attributes, c = srgb(b.color);
-    for (let k = 0; k < trailN; k++) {
-      const tt = Math.max(t - k * 1.1, 0), ii = Math.min(Math.floor(tt), N - 1), jj = Math.min(ii + 1, N - 1), ff = tt - ii;
+    b.shadow.material.opacity = clamp(.9 - agl * .35, .2, .9) * Math.min(popK, 1);
+    const P = b.trail.geometry.attributes, c = srgb(b.color), n = P.size.count;
+    for (let k = 0; k < n; k++) {
+      const tt = Math.max(t - k * 1.2, s0), ii = Math.min(Math.floor(tt), R.N - 1), jj = Math.min(ii + 1, R.N - 1), ff = tt - ii;
       const p = toScene(tr.x[ii] + (tr.x[jj] - tr.x[ii]) * ff, tr.y[ii] + (tr.y[jj] - tr.y[ii]) * ff, tr.z[ii] + (tr.z[jj] - tr.z[ii]) * ff);
       P.position.setXYZ(k, p.x, p.y, p.z);
-      const fade = 1 - k / trailN;
-      P.size.setX(k, k < 2 ? 0 : s * (.18 + .22 * fade) * (1 + .4 * b.hl));
-      P.rgba.setXYZW(k, .55 + .45 * c[0], .55 + .45 * c[1], .55 + .45 * c[2], fade * (.55 + .4 * b.hl) * popK);
+      const fade = 1 - k / n;
+      P.size.setX(k, k < 2 || t - k * 1.2 < s0 ? 0 : s * (.16 + .2 * fade) * (1 + .4 * b.hl));
+      P.rgba.setXYZW(k, .55 + .45 * c[0], .55 + .45 * c[1], .55 + .45 * c[2], fade * (.5 + .4 * b.hl) * Math.min(popK, 1));
     }
     P.position.needsUpdate = P.size.needsUpdate = P.rgba.needsUpdate = true;
-    // dashed full path while highlighted, marching
     b.path.material.opacity += ((hl ? .95 : 0) - b.path.material.opacity) * damp(8, dt);
     b.path.visible = b.path.material.opacity > .02;
     b.path.material.dashOffset -= dt * .35;
-    // the fix ring springs to its size (critically under-damped for a little bounce)
-    if (b.ring.visible) {
-      b.ring.position.lerp(b.ringPos, damp(6, dt));
-      b.ringV += (b.ringTarget - b.ringS) * 160 * dt; b.ringV *= Math.exp(-dt * 11); b.ringS += b.ringV * dt;
-      if (b.ringTarget === 0 && b.ringS < .004) { b.ring.visible = false; b.ringS = 0; b.ringV = 0; }
-      b.ring.scale.setScalar(Math.max(b.ringS, 1e-4));
-      b.ring.position.y = b.ringPos.y + .03;
-    }
     if (b.sayUntil && now > b.sayUntil) { b.say.classList.remove('on'); b.sayUntil = 0; }
+    if (b.pingUntil && now > b.pingUntil) { b.ping.classList.remove('on'); b.pingUntil = 0; }
+    // the type shows only on hover
+    b.tag.classList.toggle('on', b.hl > .5);
+    if (b.hl > .5) {
+      const txt = `${b.sp.name} <small>· ${b.caught ? 'caught ✓' : b.heardBy?.length ? `heard by ${b.heardBy.join(', ')}` : 'hiding'}</small>`;
+      if (b.tag.innerHTML !== txt) b.tag.innerHTML = txt;
+    }
+    const ps = BIRD_PX * .5 * (1 + .3 * b.hl) * (1 + 1.3 * b.fk);
+    place(b.tagO, b.root.position, ps + 4); place(b.checkO, b.root.position, ps * .7); place(b.sayO, b.root.position, ps + 34); place(b.pingO, b.root.position, ps * .7);
   }
 
-  // huts: drop in, binoculars turn toward the strongest bearing they measure, beams show each bearing
-  for (const s of B.sensors) {
-    const h = huts[s.id];
-    if (!REDUCED && introT > 1.1) { h.v += (1 - h.pop) * 120 * dt; h.v *= Math.exp(-dt * 9); h.pop += h.v * dt; }
-    h.g.scale.setScalar(Math.max(h.pop, 1e-3) * Math.max(1, D / 14));
-    const goal = h.target ? -h.target[1].bearing[i] * rad : h.ang + Math.sin(clock * .6 + s.x) * .9;
-    h.bino.rotation.y += Math.atan2(Math.sin(goal - h.bino.rotation.y), Math.cos(goal - h.bino.rotation.y)) * damp(h.target ? 7 : 2, dt);
-    h.flag.rotation.y = Math.sin(clock * 4 + s.y) * .4;
-    for (const oid of objIds) {
-      const bm = h.beams[oid];
-      if (!bm) continue;
-      bm.a += ((bm.on ? .2 : 0) - bm.a) * damp(8, dt);
-      bm.m.visible = bm.a > .01; bm.m.material.opacity = bm.a * (.85 + .15 * Math.sin(clock * 9 + oid.length));
+  // huts: pop in, lift when hovered or dragged, binoculars turn toward the strongest bearing they measure
+  for (const st of stations) {
+    if (!REDUCED) { st.v += (1 - st.pop) * 120 * dt; st.v *= Math.exp(-dt * 9); st.pop += st.v * dt; }
+    st.liftS = (st.liftS ?? 0) + (st.lift - (st.liftS ?? 0)) * damp(12, dt);
+    st.g.scale.setScalar(Math.max(st.pop, 1e-3) * 1.35 * Math.max(1, D / 14) * (1 + .18 * st.liftS));
+    const goal = st.target ? -st.target.bearing * rad : st.ang + Math.sin(clock * .6 + st.x * .001) * .9;
+    st.bino.rotation.y += Math.atan2(Math.sin(goal - st.bino.rotation.y), Math.cos(goal - st.bino.rotation.y)) * damp(st.target ? 7 : 2, dt);
+    st.flag.rotation.y = Math.sin(clock * 4 + st.y * .001) * .4;
+    for (const bm of Object.values(st.beams)) {
+      bm.a += ((bm.on && mode !== 'place' ? .18 : 0) - bm.a) * damp(8, dt);
+      bm.m.visible = bm.a > .01; bm.m.material.opacity = bm.a * (.85 + .15 * Math.sin(clock * 9));
       if (bm.on) bm.m.rotation.y += Math.atan2(Math.sin(-bm.bearing * rad - bm.m.rotation.y), Math.cos(-bm.bearing * rad - bm.m.rotation.y)) * damp(9, dt);
     }
-    h.shown += (h.goal - h.shown) * damp(8, dt);
-    const n = Math.round(h.shown); if (h.n.textContent !== `${n}`) h.n.textContent = n;
-    if (h.sayUntil && now > h.sayUntil) { h.say.classList.remove('on'); h.sayUntil = 0; }
+    if (st.card) {
+      st.conf += (st.confGoal - st.conf) * damp(6, dt);
+      st.meter.style.transform = `scaleX(${st.conf.toFixed(3)})`;
+      st.clip.setAttribute('width', t.toFixed(1)); st.cur.setAttribute('x1', t.toFixed(1)); st.cur.setAttribute('x2', t.toFixed(1));
+      st.card.classList.toggle('hl', st.lift > 0);
+    }
+    tmp.copy(st.g.position); tmp.y += .62 * st.g.scale.y; place(st.signO, tmp, 2);
   }
-  shownSpotted += (spottedGoal - shownSpotted) * damp(8, dt);
-  const sv = `${Math.round(shownSpotted)}`; if ($('#spotted').textContent !== sv) $('#spotted').textContent = sv;
-
-  // water shimmer and drifting clouds
   water.position.y = (wl - base) * VEX / 1000 + Math.sin(clock * 1.3) * .004;
   for (const c of clouds) { const u = c.userData; u.a += dt * .012; c.position.set(CX + Math.cos(u.a) * u.r, u.y + Math.sin(clock * .5 + u.a * 3) * .08, CZ + Math.sin(u.a) * u.r * .8); }
   stepParticles(dt);
-
   renderer.render(scene, camera);
 
-  // HUD follows the world, using transforms only (no layout work)
-  const place = (o, p, dy = 0) => { v3.copy(p).project(camera); const vis = v3.z < 1; o.style.display = vis ? '' : 'none'; if (vis) o.style.transform = `translate3d(${((v3.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - v3.y) / 2 * innerHeight - dy).toFixed(1)}px, 0)`; };
-  for (const id of objIds) {
-    const b = birds[id], ps = BIRD_PX * .55 * (1 + .3 * b.hl) * (1 + 1.3 * (b.fk ?? 0));
-    place(b.tagO, b.root.position, ps); b.tag.classList.toggle('big', b.hl > .5);
-    place(b.sayO, b.root.position, ps + 30);
-    if (b.hl > .5 || following === id) {
-      const agl = Math.round((b.root.position.y - toScene(0, 0, groundH(B.truth[id].x[i], B.truth[id].y[i])).y) * 1000 / VEX), kmh = Math.round(Math.hypot(B.truth[id].x[j] - B.truth[id].x[i], B.truth[id].y[j] - B.truth[id].y[i]) * 3.6);
-      b.tag.textContent = `${b.sp.name} · ${agl} m up · ${kmh} km/h`;
-    } else if (b.tag.textContent !== b.sp.name) b.tag.textContent = b.sp.name;
+  if (R) {   // timeline: thumb eases toward the time, fill follows; transforms only
+    const r = scrub.getBoundingClientRect(), goalX = (t / Math.max(R.N - 1, 1)) * r.width;
+    thumbX = dragging || REDUCED ? goalX : thumbX + (goalX - thumbX) * damp(18, dt);
+    thumb.style.transform = `translateX(${thumbX.toFixed(1)}px) scale(${dragging ? 1.12 : 1})`;
+    $('#fill').style.transform = `scaleX(${(thumbX / Math.max(r.width, 1)).toFixed(4)})`;
+    const left = fmtLeft(R.N - 1 - t);
+    if ($('#left').textContent !== left) { $('#left').textContent = left; $('#tbubble').textContent = `${left} left`; scrub.setAttribute('aria-valuenow', i); scrub.setAttribute('aria-valuetext', `${left} left`); }
   }
-  for (const s of B.sensors) { const h = huts[s.id]; tmp.copy(h.g.position).y += .62 * h.g.scale.y; place(h.signO, tmp, 4); place(h.sayO, tmp, 30); }
-  for (const id of objIds) {
-    const b = birds[id], tr = B.truth[id];
-    const agl = Math.round(tr.z[i] - groundH(tr.x[i], tr.y[i])), kmh = Math.round(Math.hypot(tr.x[j] - tr.x[i], tr.y[j] - tr.y[i]) * 3.6);
-    const txt = `${agl} m up · ${kmh} km/h`; if (b.live.textContent !== txt) b.live.textContent = txt;
-  }
-
-  // timeline
-  const r = scrub.getBoundingClientRect(), goalX = (t / Math.max(N - 1, 1)) * r.width;
-  thumbX = dragging || REDUCED ? goalX : thumbX + (goalX - thumbX) * damp(18, dt);
-  thumb.style.transform = `translateX(${thumbX.toFixed(1)}px) scale(${dragging ? 1.12 : 1})`;
-  $('#fill').style.transform = `scaleX(${(thumbX / Math.max(r.width, 1)).toFixed(4)})`;
-  const tb = $('#tbubble'), tbt = fmtT(B.t[i]); if (tb.textContent !== tbt) tb.textContent = tbt;
-  const clk = fmtT(B.t[i]); if ($('#clock').textContent !== clk) { $('#clock').textContent = clk; scrub.setAttribute('aria-valuenow', i); scrub.setAttribute('aria-valuetext', `${clk} UTC`); }
-  requestAnimationFrame(frame);
 }
 
 function resize() {
@@ -937,11 +1048,23 @@ function resize() {
 }
 addEventListener('resize', resize);
 resize();
-onSecond(Math.min(Math.floor(t), N - 1), false); lastI = Math.min(Math.floor(t), N - 1);
-$('#loading').style.opacity = 0; setTimeout(() => $('#loading').remove(), 650);
-setTimeout(() => $('#hint').style.opacity = 0, 9000);
-window.__cute = { camera, controls, birds, follow, setHover, get t() { return t; }, set t(v) { t = v; } };  // for screenshots and debugging
 requestAnimationFrame(frame);
+window.__cute = { camera, controls, follow, setHover, overview, get R() { return R; }, get mode() { return mode; }, get stations() { return stations; }, get t() { return t; }, set t(v) { t = v; }, setPlaying, showEnd };   // for screenshots and debugging
+
+// ---------- boot: area from the URL or the picker; a full round in the URL resumes it ----------
+try {
+  AREAS = await getJSON('/api/areas');
+  const a = AREAS.find(x => x.id === q.get('area'));
+  const huts = (q.get('huts') ?? '').split(';').map(p => p.split(',').map(Number)).filter(p => p.length === 2 && p.every(Number.isFinite));
+  if (a) {
+    await loadArea(a, huts);
+    if (q.has('seed') && q.has('birds') && stations.length) await startRound(+q.get('seed') || 0, +q.get('t') || 0, q.get('play') === '1');
+  } else { await loadArea(AREAS.find(x => x.id === 'kaniv') ?? AREAS[0]); showPicker(); }   // a board behind the picker
+} catch (err) {
+  $('#loading .card').innerHTML = `The bird server is asleep 💤<br><small style="color:var(--soft)">Start it with <code>.venv/bin/python serve.py</code>, then reload.<br>${err.message}</small>`;
+  throw err;
+}
+$('#loading').style.opacity = 0; setTimeout(() => $('#loading').remove(), 650);
 </script>
 </body>
 </html>
