@@ -340,7 +340,7 @@ function fatLine(pts, col, width, opacity) {
   return new Line2(g, m);
 }
 const line = (pts, col, opts = {}) => new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: col, transparent: true, ...opts }));
-const label = (text, obj) => { const el = Object.assign(document.createElement('div'), { className: 'lbl', textContent: text }); $('#labels').append(el); labels.push([el, obj]); };
+const label = (text, obj) => { const el = Object.assign(document.createElement('div'), { className: 'lbl', textContent: text }); $('#labels').append(el); labels.push([el, obj]); return el; };
 
 async function openArea(a, opts = {}) {
   area = a;
@@ -475,8 +475,17 @@ function applyBundle(b, fit) {
       return `Estimated position of ${id}. ${heard.join(' and ')} measured a bearing, and the lines cross here. The circle shows the estimated error (${fx[3]} m). Real error at this moment: ${Math.round(err)} m.`;
     };
     hoverables.push(disc);
+    // radius line from the centre to the edge, labelled with the estimated error
+    const radius = fatLine([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)], color(id), 2, 0.9);
+    radius.material.depthTest = false;
+    radius.renderOrder = 12;
+    const mid = new THREE.Object3D();
+    mid.position.set(0.5, 0, 0);
+    ring.add(radius, mid);
+    const ceLabel = label('', mid);
+    Object.assign(ceLabel.style, { background: color(id), color: '#fff' });
     sensedGroup.add(ring);
-    rings[id] = ring;
+    rings[id] = { ring, ceLabel };
   }
 
   buildCards();
@@ -564,11 +573,12 @@ function update(force) {
     l.geometry.setFromPoints([s.top, s.top.clone().add(new THREE.Vector3(ux * len, 0, -uy * len))]);
   }
   for (const id of objIds) {
-    const fx = fixAt[id].get(B.t[i]), ring = rings[id];
+    const fx = fixAt[id].get(B.t[i]), { ring, ceLabel } = rings[id];
     ring.visible = !!fx;
     if (!fx) continue;
     ring.position.copy(toScene(fx[1], fx[2], groundH(fx[1], fx[2]) + 30));
     ring.scale.setScalar(Math.max(fx[3], 60) / 1000);
+    ceLabel.textContent = `±${fx[3]} m`;
   }
   document.querySelectorAll('.card svg .cur').forEach(c => { const x = i / (N - 1) * SW; c.setAttribute('x1', x); c.setAttribute('x2', x); });
   document.querySelectorAll('.row').forEach(r => {
