@@ -247,6 +247,8 @@ const opt = { path: 'full', colorBy: 'drone', ribbon: true, labels: true, drops:
 const heat = { metric: 'off', view: 'slice', alt: 1, em: null };
 const SENSOR_PX = 64;  // sensor models also keep a fixed size on screen; thin tripods vanish below ~50 px
 // Per sensor kind: 3D model (models/sensors/), what the card plots, and how a row reads at time index i.
+const CAMERA = { unit: 'detection margin, dB', y: L => L.snr, thr: (L, s) => s.threshold_db, lo: -30, hi: 30, off: 'not seen',
+  row: 'Direction and class', val: (L, i, oid) => `${L.bearing[i].toFixed(0)}° · ${L.conf[i] >= 0.5 ? B.drones[oid].class.replace('_', '-') : 'unknown'}` };
 const KIND = {
   rf: { model: 'rf_receiver', what: 'radio receiver', unit: 'received power, dBm', y: L => L.power,
     thr: (L, s) => L.noise + s.threshold_db, lo: -130, hi: -50, off: 'no signal', row: 'Power and bearing',
@@ -256,13 +258,9 @@ const KIND = {
     thr: (L, s) => L.noise + s.threshold_db, lo: -130, hi: -50, off: 'no return', row: 'Range, bearing and radial speed',
     val: (L, i) => `${Math.round(L.range[i])} m · ${L.bearing[i].toFixed(0)}°`,
     tip: c => `radar on a ${c.mast_m} m mast. It transmits its own signal and measures the range, direction and radial speed of every drone it can see, whether or not that drone is transmitting.` },
-  eo: { model: 'eo_camera', what: 'daylight camera', unit: 'detection margin, dB', y: L => L.snr,
-    thr: (L, s) => s.threshold_db, lo: -30, hi: 30, off: 'not seen', row: 'Direction and class',
-    val: (L, i, oid) => `${L.bearing[i].toFixed(0)}° · ${L.conf[i] >= 0.5 ? B.drones[oid].class.replace('_', '-') : 'unknown'}`,
+  eo: { model: 'eo_camera', what: 'daylight camera', ...CAMERA,
     tip: c => `daylight camera on a ${c.mast_m} m mast, zoomed to ${c.hfov_deg}°. It sees a drone when the line of sight is clear and enough pixels and contrast are left. It reports a direction and a class.` },
-  ir: { model: 'thermal_camera', what: 'thermal camera', unit: 'detection margin, dB', y: L => L.snr,
-    thr: (L, s) => s.threshold_db, lo: -30, hi: 30, off: 'not seen', row: 'Direction and class',
-    val: (L, i, oid) => `${L.bearing[i].toFixed(0)}° · ${L.conf[i] >= 0.5 ? B.drones[oid].class.replace('_', '-') : 'unknown'}`,
+  ir: { model: 'thermal_camera', what: 'thermal camera', ...CAMERA,
     tip: c => `thermal camera on a ${c.mast_m} m mast, zoomed to ${c.hfov_deg}°. It sees the heat of engines, motors and batteries, by day and by night, when the line of sight is clear.` },
   acoustic: { model: 'acoustic_array', what: 'microphone array', unit: 'sound level, dB', y: L => L.power,
     thr: (L, s) => L.noise - L.gain + s.threshold_db, lo: -10, hi: 80, off: 'not heard', row: 'Sound level and bearing',
@@ -473,6 +471,14 @@ const line = (pts, col, opts = {}) => new THREE.Line(new THREE.BufferGeometry().
 const label = (text, obj) => { const el = Object.assign(document.createElement('div'), { className: 'lbl', textContent: text }); $('#labels').append(el); labels.push([el, obj]); return el; };
 
 
+function rgbaGeometry(p, c, ix) {  // positions xyz, colours rgba, optional triangle index
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 4));
+  if (ix) g.setIndex(ix);
+  return g;
+}
+
 // error band: a flat ribbon along the path, as wide as each fix's position error (ce), fading as
 // the error grows; capped so a fix with a km-scale error does not paint across the map
 function errorBand(id) {
@@ -487,10 +493,7 @@ function errorBand(id) {
     if (i < N - 1 && ce && fixAt[id].has(B.t[i + 1])) ix.push(2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 2, 2 * i + 1, 2 * i + 3);
   }
   start.push(ix.length);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 4));
-  g.setIndex(ix);
+  const g = rgbaGeometry(p, c, ix);
   const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
   m.userData.start = start;
   return m;
@@ -582,15 +585,10 @@ function drawHeat() {
       c.push(...rampColor(v).toArray(), 0.08 + 0.62 * v);
     }
   }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 4));
-  if (heat.view === 'slice') {
-    g.setIndex(ix);
-    heatObj = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
-  } else {
-    heatObj = new THREE.Points(g, new THREE.PointsMaterial({ vertexColors: true, transparent: true, depthWrite: false, size: C.dx / 1000 * 0.8, sizeAttenuation: true, map: dotTexture }));
-  }
+  const g = rgbaGeometry(p, c, heat.view === 'slice' ? ix : null);  // the cloud has no index: an empty one draws nothing
+  heatObj = heat.view === 'slice'
+    ? new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.DoubleSide, depthWrite: false }))
+    : new THREE.Points(g, new THREE.PointsMaterial({ vertexColors: true, transparent: true, depthWrite: false, size: C.dx / 1000 * 0.8, sizeAttenuation: true, map: dotTexture }));
   heatObj.renderOrder = 5;
   scene.add(heatObj);
 }
@@ -796,7 +794,6 @@ function applyBundle(b, fit) {
     bearings[key] = { l, s };
   }
   for (const id of objIds) {
-    fixAt[id] = new Map(B.fused[id].map(f => [f[0], f]));
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 64), new THREE.MeshBasicMaterial({ color: color(id), side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false }));
     ring.rotation.x = -Math.PI / 2;
     ring.renderOrder = 11;
@@ -887,6 +884,9 @@ function whyCard(k, i) {
   const db = v => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`;
   const row = (name, val, cls = '') => `<tr${cls && ` class="${cls}"`}><td>${name}</td><td>${val}</td></tr>`;
   const losses = rows => rows.map(([n, v]) => `<tr><td>${n}${bar(v)}</td><td>${db(-v)}</td></tr>`).join('');
+  const radio = () => losses([['Free-space loss', L.fspl[i]], ['Terrain loss', L.diff[i]], ['Shadowing', L.shadow[i]]])
+    + row('Received power', `${L.power[i].toFixed(1)} dBm`, 'sum') + row('Noise floor', `${L.noise.toFixed(1)} dBm`)
+    + row(`SNR (threshold ${s.threshold_db} dB)`, `${L.snr[i].toFixed(1)} dB`);
   const terrain = L.diff?.[i] >= 6 ? 'Terrain blocks the direct path.' : L.diff?.[i] > 0 ? 'Terrain is near the direct path.' : 'The direct path is clear.';
   const card = (sub, body, why) => `<h3>${sid} ← ${oid}<span class="close">✕</span></h3>
     <div style="color:var(--muted);margin-bottom:6px">${fmtT(B.t[i])} UTC · ${(L.dist[i] / 1000).toFixed(2)} km · ${sub}</div>
@@ -928,18 +928,13 @@ function whyCard(k, i) {
     `${terrain} The sound left the drone ${L.lag[i].toFixed(1)} s ago, so the bearing points to where it was then.`);
 
   if (kind === 'remote_id') return card(`${s.freq_mhz} MHz broadcast`,
-    row('Broadcast power (EIRP)', `${L.eirp.toFixed(1)} dBm`) + row('Receiver antenna gain', db(s.gain_dbi))
-    + losses([['Free-space loss', L.fspl[i]], ['Terrain loss', L.diff[i]], ['Shadowing', L.shadow[i]]])
-    + row('Received power', `${L.power[i].toFixed(1)} dBm`, 'sum') + row('Noise floor', `${L.noise.toFixed(1)} dBm`)
-    + row(`SNR (threshold ${s.threshold_db} dB)`, `${L.snr[i].toFixed(1)} dB`)
+    row('Broadcast power (EIRP)', `${L.eirp.toFixed(1)} dBm`) + row('Receiver antenna gain', db(s.gain_dbi)) + radio()
     + (det ? row('UAS ID', L.uas_id) + row('Reported altitude, speed', `${Math.round(L.rep_alt[i])} m MSL, ${L.rep_speed[i].toFixed(1)} m/s`)
       + row('Operator at', `${L.operator[0].toFixed(5)}, ${L.operator[1].toFixed(5)}`) : ''),
     `${terrain}${det ? ' The message gives the position directly.' : ''}`);
 
   return card(`${o.freq_mhz} MHz`,
-    row('Transmit power (EIRP)', `${o.eirp_dbm.toFixed(1)} dBm`) + row('Receiver antenna gain', db(s.gain_dbi))
-    + losses([['Free-space loss', L.fspl[i]], ['Terrain loss', L.diff[i]], ['Shadowing', L.shadow[i]]])
-    + row('Received power', `${L.power[i].toFixed(1)} dBm`, 'sum') + row('Noise floor', `${L.noise.toFixed(1)} dBm`)
+    row('Transmit power (EIRP)', `${o.eirp_dbm.toFixed(1)} dBm`) + row('Receiver antenna gain', db(s.gain_dbi)) + radio()
     + row(`SNR (threshold ${s.threshold_db} dB)`, `${L.snr[i].toFixed(1)} dB`)
     + (det ? row('Bearing error, 1σ', `±${L.sigma[i].toFixed(1)}°`) : ''), terrain);
 }
@@ -1099,33 +1094,20 @@ addEventListener('pointermove', e => {
 
 // ---- start: area picker, or a direct link ----
 // ?area=<id>&rx=3&dr=2&seed=42&t=<seconds>&ground=sat|map|elev&show=truth|sensed|both&sel=RF1|drone_01
-const q = new URLSearchParams(location.search), gameArea = AREAS.find(a => a.id === q.get('game'));
-const startArea = AREAS.find(a => a.id === q.get('area'));
-const fromLink = () => {
-  t = +(q.get('t') ?? 0);
-  selected = q.get('sel');
-  ground = q.get('ground') ?? 'sat';
-  show = q.get('show') ?? 'both';
-  document.querySelectorAll('#ground button').forEach(b => b.classList.toggle('on', b.dataset.v === ground));
-  document.querySelectorAll('#show button').forEach(b => b.classList.toggle('on', b.dataset.v === show));
-};
-const huts = (q.get('huts') ?? '').split(';').filter(Boolean).map(h => h.split(',').map(Number));
+const q = new URLSearchParams(location.search), huts = (q.get('huts') ?? '').split(';').filter(Boolean).map(h => h.split(',').map(Number));
+const gameArea = AREAS.find(a => a.id === q.get('game')), startArea = AREAS.find(a => a.id === q.get('area'));
 for (const k in SETTINGS) if (q.has(k)) settings[k] = k === 'mix' ? q.get(k) : +q.get(k);
 showSettings();
-if (gameArea && huts.length) {
-  fromLink();
-  await openArea(gameArea, {}, { kind: 'game', huts, birds: +(q.get('birds') ?? 6), seed: +(q.get('seed') ?? 1) });
-} else if (q.get('planned')) {
-  fromLink();
-  await openArea({ id: 'planned', bbox: [0, 0, 0, 0] }, {}, { kind: 'planned' });
-} else if (startArea) {
+const from = gameArea && huts.length ? [gameArea, {}, { kind: 'game', huts, birds: +(q.get('birds') ?? 6), seed: +(q.get('seed') ?? 1) }]
+  : q.get('planned') ? [{ id: 'planned', bbox: [0, 0, 0, 0] }, {}, { kind: 'planned' }]
+  : startArea ? [startArea, { rx: +(q.get('rx') ?? 3), dr: +(q.get('dr') ?? 2), seed: +(q.get('seed') ?? 42) }] : null;
+if (from) {
   t = +(q.get('t') ?? 0);
   selected = q.get('sel');
   ground = q.get('ground') ?? 'sat';
   show = q.get('show') ?? 'both';
-  document.querySelectorAll('#ground button').forEach(b => b.classList.toggle('on', b.dataset.v === ground));
-  document.querySelectorAll('#show button').forEach(b => b.classList.toggle('on', b.dataset.v === show));
-  await openArea(startArea, { rx: +(q.get('rx') ?? 3), dr: +(q.get('dr') ?? 2), seed: +(q.get('seed') ?? 42) });
+  for (const [sel, v] of [['#ground', ground], ['#show', show]]) document.querySelectorAll(`${sel} button`).forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  await openArea(...from);
 } else {
   showDialog();
 }

@@ -221,6 +221,13 @@ def test_game_birds_are_only_heard_while_they_are_there():
         assert all(first <= f[0] <= last for f in b["fused"][o["id"]])
 
 
+def test_a_looping_drone_with_one_waypoint_circles_it():
+    p = ll(0, 0)
+    obj = {"id": "x", "waypoints": [[p["lat"], p["lon"]]], "loop": True, "speed_ms": 30, "alt_agl_m": 300}
+    x, y, *_ = sim.track(flat(), obj, np.arange(0, 300, 1.0), DRONES["fixed_wing_recon"])  # was: OverflowError
+    assert np.hypot(x, y).max() < 2000
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

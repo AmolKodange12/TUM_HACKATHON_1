@@ -118,6 +118,7 @@ const MAX_SIDE_KM = 25;
 const RX_DEFAULT = { mast_m: 10, gain_dbi: 6, noise_figure_db: 6, threshold_db: 6, bearing_sigma_deg: 2.0, bearing_bias_deg: 0 };
 const ALT_RANGE = { quadcopter: [40, 150], fixed_wing_recon: [300, 1000], delta_wing: [150, 1500], decoy: [150, 1500] };  // m above ground, for random drones
 
+const radio = type => Object.fromEntries(Object.entries(types[type].emitter).filter(([k]) => k !== 'what'));  // a type's default radio
 const types = Object.fromEntries(Object.entries(await (await fetch('../drones.json')).json()).filter(([k]) => !k.startsWith('_')));
 const load = async url => { const r = await fetch(url, { cache: 'no-store' }).catch(() => null); return r?.ok ? r.json() : null; };
 let sc = await load('../out/planned/scenario.json') ?? await load('../scenario.json');
@@ -252,7 +253,7 @@ $('#side').addEventListener('change', e => {
     const o = sc.objects[+d.dataset.d];
     o[k] = val;
     if (k === 'type') {  // a new type brings its own radio and cruise speed
-      Object.assign(o, Object.fromEntries(Object.entries(types[val].emitter).filter(([key]) => key !== 'what')), { speed_ms: types[val].flight.cruise_speed_mps });
+      Object.assign(o, radio(val), { speed_ms: types[val].flight.cruise_speed_mps });
       renderLists();
     }
   }
@@ -277,7 +278,7 @@ $('#d-rtype').innerHTML += typeOptions(null);
 function newDrone(type, waypoints = [], alt) {
   const t = types[type];
   const o = { id: nextId('drone_', sc.objects, true), type, alt_agl_m: alt ?? Math.round((ALT_RANGE[type] ?? [100, 300]).reduce((a, b) => (a + b) / 2) / 10) * 10,
-              speed_ms: t.flight.cruise_speed_mps, ...Object.fromEntries(Object.entries(t.emitter).filter(([k]) => k !== 'what')), waypoints };
+              speed_ms: t.flight.cruise_speed_mps, ...radio(type), waypoints };
   sc.objects.push(o);
   return o;
 }
@@ -344,8 +345,7 @@ $('#run').onclick = async () => {
   const res = await fetch('/api/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }).catch(() => null);
   const out = await res?.json().catch(() => null);
   if (res?.ok && out?.ok) {
-    $('#msg').className = 'hint';
-    $('#msg').innerHTML = `Done: ${Object.values(out.fixes).reduce((a, b) => a + b, 0)} position fixes. Opening the replay…`;
+    $('#msg').textContent = `Done: ${Object.values(out.fixes).reduce((a, b) => a + b, 0)} position fixes. Opening the replay…`;
     location.href = '../viewer/?planned=1';
     return;
   }

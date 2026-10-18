@@ -30,7 +30,7 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 7px; transform: translateY(0) scale(1); text-shadow: 0 1px 0 rgba(0, 0, 0, .12);
     transition: transform .32s var(--spring), box-shadow .18s var(--out), filter .2s, opacity .2s; will-change: transform; }
   .btn:hover { transform: translateY(-2px) scale(1.05); filter: brightness(1.06); }
-  .btn:active, .btn.press { transform: translateY(4px) scale(.95); box-shadow: 0 1px 0 var(--cd), 0 3px 8px rgba(59, 47, 92, .16); transition-duration: .07s; }
+  .btn:active { transform: translateY(4px) scale(.95); box-shadow: 0 1px 0 var(--cd), 0 3px 8px rgba(59, 47, 92, .16); transition-duration: .07s; }
   .btn:disabled { opacity: .45; cursor: default; transform: none; filter: grayscale(.4); }
   .btn:focus-visible, #scrub:focus-visible, .area:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   .btn svg { width: 18px; height: 18px; }
@@ -358,7 +358,12 @@ grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
 const toon = (color, o = {}) => new THREE.MeshToonMaterial({ color, gradientMap: grad, ...o });
 const INK = '#3b2f5c';
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const disposeTree = o => o.traverse(c => { c.geometry?.dispose?.(); (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m?.dispose?.()); });
+// a mesh part with an optional ink outline (a slightly bigger copy, back faces only)
+const partMaker = (ol, grow, shadow) => (parent, geo, mat, p, s, r, outline = true) => {
+  const m = new THREE.Mesh(geo, mat); m.position.set(...p); m.scale.set(...s); if (r) m.rotation.set(...r); m.castShadow = shadow;
+  if (outline) { const o = new THREE.Mesh(geo, ol); o.scale.setScalar(grow); m.add(o); }
+  parent.add(m); return m;
+};
 
 // ---------- the current area: terrain grid, frame, helpers ----------
 let AREA = null, T = null, F = null, zmin, zmax, zr, base, wl, wlRel, X0, X1, Y0, Y1, W, H, CX, CZ, D, home, board = null, land = null, water = null;
@@ -374,7 +379,7 @@ function groundH(x, y) {
 // ---------- the diorama: faceted pastel terrain, water, soil skirt, rounded board, trees, houses, clouds ----------
 let popItems = [], clouds = [], introT = 99;
 function buildBoard(seed) {
-  if (board) { scene.remove(board); disposeTree(board); }
+  if (board) { scene.remove(board); disposeKeep(board); }
   board = new THREE.Group(); scene.add(board); popItems = []; clouds = []; introT = REDUCED ? 99 : 0;
   zmin = Infinity; zmax = -Infinity;
   for (const z of T.z) { zmin = Math.min(zmin, z); zmax = Math.max(zmax, z); }
@@ -537,11 +542,7 @@ const haloTex = radialTex([[0, 'rgba(255,255,255,.9)'], [.4, 'rgba(255,255,255,.
 function makeBird(sp, color) {
   const root = new THREE.Group(), body = new THREE.Group(), ol = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
   root.add(body);
-  const add = (parent, geo, mat, p, s, r, outline = true) => {
-    const m = new THREE.Mesh(geo, mat); m.position.set(...p); m.scale.set(...s); if (r) m.rotation.set(...r);
-    if (outline) { const o = new THREE.Mesh(geo, ol); o.scale.setScalar(1.075); m.add(o); }
-    parent.add(m); return m;
-  };
+  const add = partMaker(ol, 1.075, false);
   add(body, SPH, toon(sp.body), [0, 0, 0], [.5, .46, .8]);
   add(body, SPH, toon(sp.belly), [0, -.12, -.1], [.4, .34, .62], null, false);
   add(body, SPH, toon(sp.head), [0, .3, -.62], [.37, .36, .37]);
@@ -586,11 +587,7 @@ let stations = [];
 function makeHut(k) {
   const g0 = new THREE.Group(), g = new THREE.Group(), ol = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide }), wood = toon('#c98b5a'), wood2 = toon('#e5ad73');
   g0.add(g);   // g0 stands on the ground; g (the hut itself) rides up its mast
-  const add = (parent, geo, mat, p, sc, r, outline = true) => {
-    const m = new THREE.Mesh(geo, mat); m.position.set(...p); m.scale.set(...sc); if (r) m.rotation.set(...r); m.castShadow = true;
-    if (outline) { const o = new THREE.Mesh(geo, ol); o.scale.setScalar(1.08); m.add(o); }
-    parent.add(m); return m;
-  };
+  const add = partMaker(ol, 1.08, true);
   for (const [lx, lz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) add(g, CYL, wood, [lx * .075, .11, lz * .075], [.014, .22, .014], null, false);
   add(g, BOX, wood2, [0, .232, 0], [.25, .028, .25]);
   add(g, BOX, toon(HUTC[k % HUTC.length]), [0, .31, .03], [.17, .13, .15]);
@@ -919,7 +916,7 @@ function setupRound(B) {
   const spawn = Object.fromEntries(objIds.map(id => [id, B.spawn?.[id] ?? [0, N - 1]]));
   const fixAt = Object.fromEntries(objIds.map(id => [id, new Map((B.fused[id] ?? []).map(f => [f[0], f]))]));
   const caughtAt = Object.fromEntries(objIds.map(id => [id, (B.fused[id] ?? []).reduce((m, f) => Math.min(m, f[0]), Infinity)]));
-  R = { B, N, objIds, spawn, fixAt, caughtAt, birds: {}, shownCaught: -1 };
+  R = { B, N, objIds, spawn, fixAt, caughtAt, birds: {} };
   pathMats.length = 0;
   objIds.forEach((id, k) => {
     const sp = SPECIES[SPECIES_OF[B.drones?.[id]?.type]] ?? SPECIES.pigeon, color = ID[k % ID.length], tr = B.truth[id], b = makeBird(sp, color);

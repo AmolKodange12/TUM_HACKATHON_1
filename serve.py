@@ -27,6 +27,7 @@ ROOT = Path(__file__).parent
 AREAS = {a["id"]: a for a in json.loads((ROOT / "areas.json").read_text())}
 LOCK = threading.Lock()  # ponytail: one run at a time; per-area locks if several people share a server
 MAX_BODY = 2_000_000
+clamp = lambda v, lo, hi: min(max(int(v), lo), hi)
 
 # Export: what each output file is. "answer key" files hold the truth; keep them away from a model under test.
 FILE_ROLES = {
@@ -96,6 +97,42 @@ def export_zip(run_dir):
     return buf.getvalue(), f"mirror-world_{slug}_seed{sc.get('seed', 0)}.zip"
 
 
+def terrain(q):
+    area, cells = AREAS[q["area"][0]], clamp(q.get("cells", ["64"])[0], 16, 256)
+    with LOCK:
+        t = sim.Terrain(sim.fetch_dem(area["bbox"]), area["bbox"])
+    tj, frame = sim.terrain_json(t, cells)
+    return {"terrain": tj, "frame": frame}
+
+
+def run(req):
+    area, n_rx, n_dr, seed = AREAS[req["area"]], clamp(req["receivers"], 1, 6), clamp(req["drones"], 1, 6), int(req["seed"]) % 1_000_000
+    with LOCK:  # make_scenario may fetch and cache the DEM too
+        return sim.run(sim.make_scenario(area, n_rx, n_dr, seed, req.get("settings")), ROOT / "out" / area["id"])
+
+
+def game(req):
+    area = AREAS[req["area"]]
+    huts = [[float(v) for v in h[:3]] for h in req["huts"]][:6]  # [lat, lon] or [lat, lon, mast_m]
+    if not huts:
+        raise ValueError("place at least one station")
+    n, seed = clamp(req.get("birds", 6), 1, 12), int(req.get("seed", 1)) % 1_000_000
+    with LOCK:
+        return sim.run(sim.make_game(area, huts, n, seed), ROOT / "out" / f"game-{area['id']}")
+
+
+def simulate(sc):
+    if not isinstance(sc, dict) or not sc.get("sensors") or not sc.get("objects"):
+        raise ValueError("a scenario needs at least one receiver and one drone")
+    with LOCK:
+        b = sim.run(sc, ROOT / "out" / "planned")
+    return {"ok": True, "fixes": {k: len(v) for k, v in b["fused"].items()}}
+
+
+GET = {"/api/areas": lambda q: list(AREAS.values()), "/api/terrain": terrain}
+POST = {"/api/run": run, "/api/game": game, "/api/simulate": simulate}
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(ROOT), **kw)
@@ -112,10 +149,10 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def api(self, fn):
+    def api(self, fn, arg):
         try:
-            self.send_json(fn())
-        except (KeyError, ValueError, TypeError, AssertionError) as e:
+            self.send_json(fn(arg()))
+        except (KeyError, IndexError, ValueError, TypeError, AssertionError) as e:
             self.send_json({"error": f"Bad request: {e}"}, 400)
         except Exception as e:
             traceback.print_exc()
@@ -129,17 +166,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         u = urlparse(self.path)
-        if u.path == "/api/areas":
-            return self.send_json(list(AREAS.values()))
-        if u.path == "/api/terrain":
-            def terrain():
-                q = parse_qs(u.query)
-                area, cells = AREAS[q["area"][0]], min(max(int(q.get("cells", ["64"])[0]), 16), 256)
-                with LOCK:
-                    t = sim.Terrain(sim.fetch_dem(area["bbox"]), area["bbox"])
-                tj, frame = sim.terrain_json(t, cells)
-                return {"terrain": tj, "frame": frame}
-            return self.api(terrain)
+        if u.path in GET:
+            return self.api(GET[u.path], lambda: parse_qs(u.query))
         if u.path == "/api/export":
             name = parse_qs(u.query).get("run", [""])[0]
             run_dir = ROOT / "out" / name
@@ -157,37 +185,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        if self.path == "/api/run":
-            def run():
-                req = self.body()
-                area = AREAS[req["area"]]
-                n_rx = min(max(int(req["receivers"]), 1), 6)
-                n_dr = min(max(int(req["drones"]), 1), 6)
-                seed = int(req["seed"]) % 1_000_000
-                with LOCK:
-                    return sim.run(sim.make_scenario(area, n_rx, n_dr, seed, req.get("settings")), ROOT / "out" / area["id"])
-            return self.api(run)
-        if self.path == "/api/game":
-            def game():
-                req = self.body()
-                area = AREAS[req["area"]]
-                huts = [[float(v) for v in h[:3]] for h in req["huts"]][:6]  # [lat, lon] or [lat, lon, mast_m]
-                if not huts:
-                    raise ValueError("place at least one station")
-                n = min(max(int(req.get("birds", 6)), 1), 12)
-                seed = int(req.get("seed", 1)) % 1_000_000
-                with LOCK:
-                    return sim.run(sim.make_game(area, huts, n, seed), ROOT / "out" / f"game-{area['id']}")
-            return self.api(game)
-        if self.path == "/api/simulate":
-            def simulate():
-                sc = self.body()
-                if not isinstance(sc, dict) or not sc.get("sensors") or not sc.get("objects"):
-                    raise ValueError("a scenario needs at least one receiver and one drone")
-                with LOCK:
-                    b = sim.run(sc, ROOT / "out" / "planned")
-                return {"ok": True, "fixes": {k: len(v) for k, v in b["fused"].items()}}
-            return self.api(simulate)
+        if self.path in POST:
+            return self.api(POST[self.path], self.body)
         self.send_json({"error": "Not found"}, 404)
 
 
