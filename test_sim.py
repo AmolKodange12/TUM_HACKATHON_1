@@ -85,12 +85,19 @@ def test_fixed_wing_banks_and_holds_an_orbit_in_wind():
 
 
 def test_same_seed_same_bytes():
+    sc = json.loads(open("scenario.json").read())
     with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
-        sim.run("scenario.json", a)
-        sim.run("scenario.json", b)
+        sim.run(sc, a)
+        sim.run(sc, b)
         files = ["truth.csv", "rf_raw.csv", "rf_budget.csv", "fused.csv", "fused.cot.xml", "bundle.json"]
         match, mismatch, err = filecmp.cmpfiles(a, b, files, shallow=False)
         assert not mismatch and not err, (mismatch, err)
+
+
+def test_adding_a_drone_does_not_move_the_others():
+    area = {"name": "t", "region": "t", "bbox": BBOX}
+    a, b = sim.make_scenario(area, 3, 2, 7), sim.make_scenario(area, 4, 3, 7)
+    assert a["sensors"] == b["sensors"][:3] and a["objects"] == b["objects"][:2]
 
 
 if __name__ == "__main__":

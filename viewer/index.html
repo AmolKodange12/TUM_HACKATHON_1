@@ -14,12 +14,38 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.4 Inter, system-ui, sans-serif; overflow: hidden; }
   canvas { display: block; }
+  [hidden] { display: none !important; }
+  button { font: inherit; color: inherit; }
   .ui { position: absolute; pointer-events: none; }
   .ui > * { pointer-events: auto; }
+
+  /* area picker */
+  #dialog { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+  #dialog .box { text-align: center; }
+  #dialog h1 { margin: 0; font-size: 40px; font-weight: 800; letter-spacing: -.5px; }
+  #dialog p { color: var(--muted); font-size: 15px; margin: 6px 0 28px; }
+  #areas { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+  .area { width: 236px; border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 8px 8px 12px; cursor: pointer; text-align: left; transition: transform .15s, box-shadow .15s; }
+  .area:hover, .area:focus-visible { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(21,26,35,.10); outline: none; }
+  .area canvas { width: 220px; height: 150px; border-radius: 10px; }
+  .area b { display: block; font-size: 15px; margin: 8px 4px 0; }
+  .area span { display: block; color: var(--muted); margin: 0 4px; }
+  .area .rel { color: var(--faint); font-size: 12px; }
+
+  /* scenario view */
   #title { top: 28px; left: 36px; pointer-events: none; }
   #title h1 { margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -.5px; text-transform: uppercase; }
   #title .sub { color: var(--muted); font-size: 16px; margin-top: 4px; }
   #title .sub2 { color: var(--faint); font-size: 13px; margin-top: 4px; }
+  #controls { top: 150px; left: 36px; width: 220px; }
+  .ctl { display: flex; align-items: center; justify-content: space-between; padding: 3px 0; }
+  .step { display: flex; align-items: center; gap: 4px; }
+  .step b { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+  .step button { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+  .step button:disabled { opacity: .35; cursor: default; }
+  .acts { display: flex; gap: 6px; margin-top: 8px; }
+  .acts button { flex: 1; border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 5px 6px; cursor: pointer; font-size: 12px; }
+  .acts button.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
   #legend { left: 36px; bottom: 96px; width: 280px; }
   .pill { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; font-size: 11px; letter-spacing: .5px; padding: 4px 10px; border-radius: 99px; text-transform: uppercase; }
   #legend h2 { margin: 12px 0 2px; font-size: 26px; font-weight: 800; }
@@ -27,7 +53,7 @@
   #ramp { height: 12px; border-radius: 2px; background: linear-gradient(90deg, #4f6b2f, #8a8f45, #c9b97a, #ece2bd); }
   .ramp-l { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 4px; }
   .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 2px; margin: 10px 8px 0 0; backdrop-filter: blur(6px); }
-  .seg button { border: 0; background: none; font: inherit; font-size: 12px; padding: 5px 10px; border-radius: 6px; color: var(--muted); cursor: pointer; }
+  .seg button { border: 0; background: none; font-size: 12px; padding: 5px 10px; border-radius: 6px; color: var(--muted); cursor: pointer; }
   .seg button.on { background: var(--ink); color: #fff; }
   #bar { left: 50%; transform: translateX(-50%); bottom: 28px; width: min(760px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; backdrop-filter: blur(6px); }
   #play { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--ink); color: #fff; cursor: pointer; font-size: 12px; }
@@ -54,37 +80,62 @@
   #why .verdict { margin-top: 8px; font-weight: 600; }
   #why .close { cursor: pointer; color: var(--faint); }
   #credits { right: 24px; bottom: 8px; color: var(--faint); font-size: 11px; pointer-events: none; }
-  #status { left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--muted); }
+  #status { left: 50%; top: 18px; transform: translateX(-50%); color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 4px 12px; }
+  #status:empty { display: none; }
   #tip { position: fixed; display: none; max-width: 280px; background: #151a23; color: #fff; font-size: 12px; line-height: 1.45; padding: 7px 10px; border-radius: 8px; pointer-events: none; z-index: 10; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
   .q { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: #e5e7eb; color: var(--muted); font-size: 10px; font-weight: 600; cursor: help; margin-left: 4px; }
   .lbl { position: absolute; font-size: 11px; font-weight: 600; color: var(--ink); background: rgba(255,255,255,.85); padding: 1px 5px; border-radius: 4px; transform: translate(-50%, -140%); white-space: nowrap; pointer-events: none; }
-  @media (max-width: 760px) { #cards, #why { display: none !important; } #title h1 { font-size: 28px; } #title { left: 16px; } #legend { left: 16px; } }
+  @media (max-width: 760px) {
+    #cards, #why { display: none !important; }
+    #title h1 { font-size: 28px; } #title, #legend, #controls { left: 16px; } #controls { top: 110px; }
+    #dialog h1 { font-size: 28px; }
+  }
 </style>
 </head>
 <body>
-<div id="title" class="ui"><h1></h1><div class="sub"></div><div class="sub2"></div></div>
-<div id="legend" class="ui">
-  <span class="pill">Real terrain</span>
-  <h2 id="gname">Satellite</h2>
-  <div class="src">Elevation: Copernicus GLO-30 · ESA</div>
-  <div id="ramp"></div>
-  <div class="ramp-l"><span id="zmin"></span><span id="vex"></span><span id="zmax"></span></div>
-  <div>
-    <div class="seg" id="ground"><button data-v="sat" class="on">Satellite</button><button data-v="map">Map</button><button data-v="elev">Elevation</button></div>
-    <div class="seg" id="show"><button data-v="truth" data-tip="Show where the drones really were.">Truth</button><button data-v="sensed" data-tip="Show what the receivers measured. A coloured line from a receiver is a measured bearing. A circle is a position from crossed bearings.">Sensed</button><button data-v="both" class="on" data-tip="Show the truth and the measurements together.">Both</button></div>
+<div id="dialog" hidden>
+  <div class="box">
+    <h1>Choose an area</h1>
+    <p>Each area uses real terrain from Copernicus GLO-30.</p>
+    <div id="areas"></div>
   </div>
 </div>
-<div id="cards" class="ui"></div>
-<div id="why" class="ui card"></div>
-<div id="bar" class="ui">
-  <button id="play" aria-label="Play">▶</button>
-  <input id="seek" type="range" min="0" value="0" step="0.01" aria-label="Time">
-  <span id="clock"></span>
-  <select id="speed" aria-label="Speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="30">30×</option><option value="60">60×</option></select>
+
+<div id="app" hidden>
+  <div id="title" class="ui"><h1></h1><div class="sub"></div><div class="sub2"></div></div>
+  <div id="controls" class="ui card">
+    <div class="ctl"><span data-tip="Number of radio receivers. The engine puts them on high ground, far apart.">Receivers</span>
+      <div class="step"><button data-k="rx" data-d="-1" aria-label="Remove a receiver">−</button><b id="n-rx"></b><button data-k="rx" data-d="1" aria-label="Add a receiver">+</button></div></div>
+    <div class="ctl"><span data-tip="Number of drones. Each drone gets a random type, height and route.">Drones</span>
+      <div class="step"><button data-k="dr" data-d="-1" aria-label="Remove a drone">−</button><b id="n-dr"></b><button data-k="dr" data-d="1" aria-label="Add a drone">+</button></div></div>
+    <div class="acts">
+      <button id="back" data-tip="Go back to the area list.">← Areas</button>
+      <button id="shuffle" class="dark" data-tip="Put all receivers and drones in new random positions.">New layout</button>
+    </div>
+  </div>
+  <div id="legend" class="ui">
+    <span class="pill">Real terrain</span>
+    <h2 id="gname">Satellite</h2>
+    <div class="src">Elevation: Copernicus GLO-30 · ESA</div>
+    <div id="ramp"></div>
+    <div class="ramp-l"><span id="zmin"></span><span id="vex"></span><span id="zmax"></span></div>
+    <div>
+      <div class="seg" id="ground"><button data-v="sat" class="on">Satellite</button><button data-v="map">Map</button><button data-v="elev">Elevation</button></div>
+      <div class="seg" id="show"><button data-v="truth" data-tip="Show where the drones really were.">Truth</button><button data-v="sensed" data-tip="Show what the receivers measured. A coloured line from a receiver is a measured bearing. A circle is a position from crossed bearings.">Sensed</button><button data-v="both" class="on" data-tip="Show the truth and the measurements together.">Both</button></div>
+    </div>
+  </div>
+  <div id="cards" class="ui"></div>
+  <div id="why" class="ui card"></div>
+  <div id="bar" class="ui">
+    <button id="play" aria-label="Play">▶</button>
+    <input id="seek" type="range" min="0" value="0" step="0.01" aria-label="Time">
+    <span id="clock"></span>
+    <select id="speed" aria-label="Speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="30">30×</option><option value="60">60×</option></select>
+  </div>
+  <div id="credits" class="ui"></div>
+  <div id="labels"></div>
 </div>
-<div id="credits" class="ui"></div>
-<div id="status" class="ui">Loading the scenario…</div>
-<div id="labels"></div>
+<div id="status" class="ui"></div>
 <div id="tip" role="tooltip"></div>
 
 <script type="importmap">
@@ -101,103 +152,93 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const VEX = 4;  // vertical exaggeration
 const DRONE_PX = 44;  // drones are drawn this many pixels across at any zoom; at real size they would be invisible
 const AIRFRAME = /grey|foam/;  // painted model parts take the drone's colour; black, glass and metal parts stay
-const COLORS = ['#e4572e', '#2e86ab', '#8e44ad', '#d4a017', '#16a085'];
-const B = await (await fetch('../out/bundle.json')).json();
-const S = B.scenario, T = B.terrain, F = B.frame, N = B.t.length;
+const COLORS = ['#e4572e', '#2e86ab', '#8e44ad', '#d4a017', '#16a085', '#c2185b'];
 const $ = s => document.querySelector(s);
-const objIds = Object.keys(B.truth);
-const color = id => COLORS[objIds.indexOf(id) % COLORS.length];
+const AREAS = await (await fetch('/api/areas')).json();
 
-// ---- terrain grid helpers (local metres: x east, y north) ----
-const zs = T.z, zmin = Math.min(...zs), zmax = Math.max(...zs);
-const base = zmin - (zmax - zmin) * 0.35;
-const toScene = (x, y, z) => new THREE.Vector3(x / 1000, (z - base) * VEX / 1000, -y / 1000);
-function groundH(x, y) {
-  const c = Math.min(Math.max((x - T.x0) / T.dx, 0), T.nx - 1.001), r = Math.min(Math.max((T.y0 - y) / T.dy, 0), T.ny - 1.001);
-  const c0 = c | 0, r0 = r | 0, fc = c - c0, fr = r - r0, z = (i, j) => zs[i * T.nx + j];
-  return (z(r0, c0) * (1 - fc) + z(r0, c0 + 1) * fc) * (1 - fr) + (z(r0 + 1, c0) * (1 - fc) + z(r0 + 1, c0 + 1) * fc) * fr;
-}
-const latlon = (x, y) => [F.lat0 + y / F.my, F.lon0 + x / F.mx];
-
-// ---- scene ----
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-document.body.prepend(renderer.domElement);
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('#eef0f4');
-const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 500);
-camera.position.set(-4, 14, 20);
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.maxPolarAngle = Math.PI * 0.47;
-scene.add(new THREE.HemisphereLight('#ffffff', '#b8b2a0', 1.6));
-const sun = new THREE.DirectionalLight('#fff7ea', 2.2);
-sun.position.set(-12, 16, -10);
-sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
-Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 60 });
-sun.shadow.bias = -0.0005;
-scene.add(sun);
-
-// terrain surface
-const pos = [], uvMerc = [], cols = [], idx = [];
+// ---- shared terrain block: used by the area previews and the scenario view ----
 const ramp = [[0, '#4f6b2f'], [0.35, '#8a8f45'], [0.7, '#c9b97a'], [1, '#ece2bd']].map(([k, c]) => [k, new THREE.Color(c)]);
 const rampAt = k => { for (let i = 1; i < ramp.length; i++) if (k <= ramp[i][0]) return ramp[i - 1][1].clone().lerp(ramp[i][1], (k - ramp[i - 1][0]) / (ramp[i][0] - ramp[i - 1][0])); return ramp.at(-1)[1]; };
-for (let i = 0; i < T.ny; i++) for (let j = 0; j < T.nx; j++) {
-  const x = T.x0 + j * T.dx, y = T.y0 - i * T.dy, z = zs[i * T.nx + j];
-  pos.push(...toScene(x, y, z).toArray());
-  uvMerc.push(latlon(x, y));
-  cols.push(...rampAt((z - zmin) / (zmax - zmin)).toArray());
-}
-for (let i = 0; i < T.ny - 1; i++) for (let j = 0; j < T.nx - 1; j++) {
-  const a = i * T.nx + j, b = a + 1, c = a + T.nx, d = c + 1;
-  idx.push(a, c, b, b, c, d);
-}
-const geo = new THREE.BufferGeometry();
-geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(uvMerc.length * 2), 2));
-geo.setIndex(idx);
-geo.computeVertexNormals();
-const terrainMat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0 });
-const terrain = new THREE.Mesh(geo, terrainMat);
-terrain.castShadow = terrain.receiveShadow = true;
-scene.add(terrain);
 
-// side walls: one strip per edge from the surface down to the base
-const wall = [], wallIdx = [];
-const edges = [
-  [...Array(T.nx).keys()].map(j => [0, j]), [...Array(T.nx).keys()].map(j => [T.ny - 1, j]),
-  [...Array(T.ny).keys()].map(i => [i, 0]), [...Array(T.ny).keys()].map(i => [i, T.nx - 1]),
-];
-for (const e of edges) {
-  const o = wall.length / 3;
-  e.forEach(([i, j], k) => {
-    const x = T.x0 + j * T.dx, y = T.y0 - i * T.dy;
-    wall.push(...toScene(x, y, zs[i * T.nx + j]).toArray(), ...toScene(x, y, base).toArray());
-    if (k) wallIdx.push(o + 2 * k - 2, o + 2 * k - 1, o + 2 * k, o + 2 * k, o + 2 * k - 1, o + 2 * k + 1);
-  });
-}
-const wallGeo = new THREE.BufferGeometry();
-wallGeo.setAttribute('position', new THREE.Float32BufferAttribute(wall, 3));
-wallGeo.setIndex(wallIdx);
-wallGeo.computeVertexNormals();
-const walls = new THREE.Mesh(wallGeo, new THREE.MeshStandardMaterial({ color: '#b9a77c', roughness: 1, side: THREE.DoubleSide }));
-walls.castShadow = true;
-scene.add(walls);
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ opacity: 0.16 }));
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -0.01;
-floor.receiveShadow = true;
-scene.add(floor);
+function buildBlock(T, F) {
+  const zs = T.z, zmin = Math.min(...zs), zmax = Math.max(...zs), widthM = (T.nx - 1) * T.dx;
+  // exaggerate low relief so it reads, but keep mountains at true scale
+  const vex = Math.min(6, Math.max(1, Math.round(0.16 * widthM / Math.max(zmax - zmin, 1)) / 2));
+  const baseT = widthM / 1000 * 0.035;  // block thickness under the lowest point, km
+  const toScene = (x, y, z) => new THREE.Vector3(x / 1000, (z - zmin) * vex / 1000 + baseT, -y / 1000);
+  const groundH = (x, y) => {
+    const c = Math.min(Math.max((x - T.x0) / T.dx, 0), T.nx - 1.001), r = Math.min(Math.max((T.y0 - y) / T.dy, 0), T.ny - 1.001);
+    const c0 = c | 0, r0 = r | 0, fc = c - c0, fr = r - r0, z = (i, j) => zs[i * T.nx + j];
+    return (z(r0, c0) * (1 - fc) + z(r0, c0 + 1) * fc) * (1 - fr) + (z(r0 + 1, c0) * (1 - fc) + z(r0 + 1, c0 + 1) * fc) * fr;
+  };
+  const pos = [], cols = [], ll = [], idx = [];
+  for (let i = 0; i < T.ny; i++) for (let j = 0; j < T.nx; j++) {
+    const x = T.x0 + j * T.dx, y = T.y0 - i * T.dy, z = zs[i * T.nx + j];
+    pos.push(...toScene(x, y, z).toArray());
+    ll.push([F.lat0 + y / F.my, F.lon0 + x / F.mx]);
+    cols.push(...rampAt((z - zmin) / Math.max(zmax - zmin, 1)).toArray());
+  }
+  for (let i = 0; i < T.ny - 1; i++) for (let j = 0; j < T.nx - 1; j++) {
+    const a = i * T.nx + j, b = a + 1, c = a + T.nx, d = c + 1;
+    idx.push(a, c, b, b, c, d);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(ll.length * 2), 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, vertexColors: true });
+  const surface = new THREE.Mesh(geo, mat);
+  surface.castShadow = surface.receiveShadow = true;
 
-// ---- ground texture: stitched web-mercator tiles ----
+  // side walls: one strip per edge from the surface down to y = 0
+  const wall = [], wallIdx = [];
+  const rows = n => [...Array(n).keys()];
+  for (const e of [rows(T.nx).map(j => [0, j]), rows(T.nx).map(j => [T.ny - 1, j]), rows(T.ny).map(i => [i, 0]), rows(T.ny).map(i => [i, T.nx - 1])]) {
+    const o = wall.length / 3;
+    e.forEach(([i, j], k) => {
+      const top = toScene(T.x0 + j * T.dx, T.y0 - i * T.dy, zs[i * T.nx + j]);
+      wall.push(...top.toArray(), top.x, 0, top.z);
+      if (k) wallIdx.push(o + 2 * k - 2, o + 2 * k - 1, o + 2 * k, o + 2 * k, o + 2 * k - 1, o + 2 * k + 1);
+    });
+  }
+  const wallGeo = new THREE.BufferGeometry();
+  wallGeo.setAttribute('position', new THREE.Float32BufferAttribute(wall, 3));
+  wallGeo.setIndex(wallIdx);
+  wallGeo.computeVertexNormals();
+  const walls = new THREE.Mesh(wallGeo, new THREE.MeshStandardMaterial({ color: '#b9a77c', roughness: 1, side: THREE.DoubleSide }));
+  walls.castShadow = true;
+
+  const group = new THREE.Group();
+  group.add(surface, walls);
+  function setTexture(st) {
+    if (!st) { Object.assign(mat, { map: null, vertexColors: true }); mat.needsUpdate = true; return; }
+    const uv = geo.attributes.uv;
+    ll.forEach(([lat, lon], k) => { const [px, py] = merc(lat, lon, st.tz); uv.setXY(k, (px - st.tx0 * 256) / st.cw, 1 - (py - st.ty0 * 256) / st.ch); });
+    uv.needsUpdate = true;
+    Object.assign(mat, { map: st.tex, vertexColors: false });
+    mat.needsUpdate = true;
+  }
+  return { group, toScene, groundH, setTexture, zmin, zmax, vex, widthKm: widthM / 1000, baseT };
+}
+
+function addLights(scene, w, shadows) {
+  scene.add(new THREE.HemisphereLight('#ffffff', '#b8b2a0', 1.6));
+  const sun = new THREE.DirectionalLight('#fff7ea', 2.2);
+  sun.position.set(-w, w * 1.4, -w * 0.9);
+  if (shadows) {
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(4096, 4096);
+    Object.assign(sun.shadow.camera, { left: -w * 1.2, right: w * 1.2, top: w * 1.2, bottom: -w * 1.2, near: 0.5, far: w * 5 });
+    sun.shadow.bias = -0.0005;
+  }
+  scene.add(sun);
+}
+
+// ---- ground textures: stitched web-mercator tiles ----
 const GROUND = {
   sat: { url: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
          credit: 'Imagery: Esri, Maxar, Earthstar Geographics' },
@@ -205,146 +246,275 @@ const GROUND = {
          credit: 'Map: Esri World Topographic Map, © OpenStreetMap contributors and others' },
 };
 const merc = (lat, lon, z) => { const n = 256 * 2 ** z, s = Math.sin(lat * Math.PI / 180); return [(lon + 180) / 360 * n, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n]; };
-const [W, Sth, E, Nth] = S.bbox, maxPx = Math.min(renderer.capabilities.maxTextureSize, 8192);
-let tz = 17, tx0, ty0, tx1, ty1;
-for (; tz > 8; tz--) {
-  [tx0, ty0] = merc(Nth, W, tz).map(v => Math.floor(v / 256)); [tx1, ty1] = merc(Sth, E, tz).map(v => Math.floor(v / 256));
-  if ((tx1 - tx0 + 1) * 256 <= maxPx && (ty1 - ty0 + 1) * 256 <= maxPx) break;
-}
-const cw = (tx1 - tx0 + 1) * 256, ch = (ty1 - ty0 + 1) * 256, uv = geo.attributes.uv;
-uvMerc.forEach(([lat, lon], k) => { const [px, py] = merc(lat, lon, tz); uv.setXY(k, (px - tx0 * 256) / cw, 1 - (py - ty0 * 256) / ch); });
-const textures = {};
-async function groundTexture(kind) {
-  if (textures[kind]) return textures[kind];
-  const cv = Object.assign(document.createElement('canvas'), { width: cw, height: ch }), g = cv.getContext('2d');
-  const jobs = [];
-  for (let x = tx0; x <= tx1; x++) for (let y = ty0; y <= ty1; y++) jobs.push(new Promise(ok => {
-    const im = new Image();
-    im.crossOrigin = 'anonymous';
-    im.onload = () => { g.drawImage(im, (x - tx0) * 256, (y - ty0) * 256); ok(); };
-    im.onerror = ok;  // a missing tile stays blank
-    im.src = GROUND[kind].url(tz, x, y);
-  }));
-  await Promise.all(jobs);
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  return (textures[kind] = tex);
-}
-async function setGround(kind) {
-  $('#gname').textContent = { sat: 'Satellite', map: 'Map', elev: 'Elevation' }[kind];
-  $('#credits').textContent = `Terrain: Copernicus GLO-30 · ${GROUND[kind]?.credit ?? 'Elevation tint'} · vertical ×${VEX}`;
-  if (kind === 'elev') { Object.assign(terrainMat, { map: null, vertexColors: true }); terrainMat.needsUpdate = true; return; }
-  $('#status').textContent = 'Loading the ground image…';
-  const tex = await groundTexture(kind);
-  $('#status').textContent = '';
-  Object.assign(terrainMat, { map: tex, vertexColors: false });
-  terrainMat.needsUpdate = true;
+const stitched = {};
+function stitch(kind, bbox, maxPx) {
+  const key = `${kind}|${bbox}|${maxPx}`;
+  return stitched[key] ??= (async () => {
+    const [W, S_, E, N_] = bbox;
+    let tz = 17, tx0, ty0, tx1, ty1;
+    for (; tz > 6; tz--) {
+      [tx0, ty0] = merc(N_, W, tz).map(v => Math.floor(v / 256)); [tx1, ty1] = merc(S_, E, tz).map(v => Math.floor(v / 256));
+      if ((tx1 - tx0 + 1) * 256 <= maxPx && (ty1 - ty0 + 1) * 256 <= maxPx) break;
+    }
+    const cw = (tx1 - tx0 + 1) * 256, ch = (ty1 - ty0 + 1) * 256;
+    const cv = Object.assign(document.createElement('canvas'), { width: cw, height: ch }), g = cv.getContext('2d');
+    const jobs = [];
+    for (let x = tx0; x <= tx1; x++) for (let y = ty0; y <= ty1; y++) jobs.push(new Promise(ok => {
+      const im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = () => { g.drawImage(im, (x - tx0) * 256, (y - ty0) * 256); ok(); };
+      im.onerror = ok;  // a missing tile stays blank
+      im.src = GROUND[kind].url(tz, x, y);
+    }));
+    await Promise.all(jobs);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return { tex, tz, tx0, ty0, cw, ch };
+  })();
 }
 
-// ---- sensors, drones, paths, bearings, fixes ----
-const truthGroup = new THREE.Group(), sensedGroup = new THREE.Group();
-scene.add(truthGroup, sensedGroup);
-const labels = [];
-const label = (text, obj) => { const el = Object.assign(document.createElement('div'), { className: 'lbl', textContent: text }); $('#labels').append(el); labels.push([el, obj]); };
-const fatMats = [];
-function fatLine(pts, color, width, opacity) {
+// ---- area picker: one small rotating block per area ----
+let previews = [];
+function showDialog() {
+  view = 'dialog';
+  playing = false;
+  $('#app').hidden = true;
+  $('#dialog').hidden = false;
+  renderer.domElement.hidden = true;
+  history.replaceState(null, '', location.pathname);
+  $('#areas').innerHTML = '';
+  for (const a of AREAS) {
+    const card = Object.assign(document.createElement('button'), { className: 'area' });
+    card.innerHTML = `<canvas width="440" height="300"></canvas><b>${a.name}</b><span>${a.region}</span><span class="rel">Loading the terrain…</span>`;
+    card.onclick = () => openArea(a);
+    $('#areas').append(card);
+    (async () => {
+      const { terrain, frame } = await (await fetch(`/api/terrain?area=${a.id}`)).json();
+      const r = new THREE.WebGLRenderer({ canvas: card.querySelector('canvas'), antialias: true, alpha: true });
+      const scene = new THREE.Scene(), blk = buildBlock(terrain, frame), w = blk.widthKm;
+      addLights(scene, w, false);
+      scene.add(blk.group);
+      const cam = new THREE.PerspectiveCamera(30, 220 / 150, 0.1, 500);
+      cam.position.set(0, w * 1.1, w * 1.75);  // far enough that the rotating diagonal stays in frame
+      cam.lookAt(0, w * 0.04, 0);
+      card.querySelector('.rel').textContent = `${Math.round(blk.zmin)}–${Math.round(blk.zmax)} m elevation`;
+      if (view !== 'dialog') return r.dispose();
+      previews.push({ r, scene, cam, g: blk.group });
+      blk.setTexture(await stitch('sat', a.bbox, 1024));
+    })();
+  }
+}
+function closeDialog() {
+  previews.forEach(p => { p.r.dispose(); p.r.forceContextLoss(); });
+  previews = [];
+  $('#dialog').hidden = true;
+  $('#app').hidden = false;
+  renderer.domElement.hidden = false;
+}
+
+// ---- scenario view ----
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 500);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.47;
+let scene, world, blk, toScene, groundH;
+let view = 'dialog', area = null, B, S, T, N, objIds = [], color;
+const state = { rx: 3, dr: 2, seed: 42 };
+const LIMITS = { rx: [2, 6], dr: [1, 6] };  // 2 receivers minimum, so bearings can cross
+let t = 0, playing = false, show = 'both', ground = 'sat', selected = null, lastI = -1;
+let labels = [], hoverables = [], fatMats = [], drones = {}, bearings = {}, rings = {}, fixAt = {};
+
+function fatLine(pts, col, width, opacity) {
   const g = new LineGeometry();
   g.setPositions(pts.flatMap(p => p.toArray()));
-  const m = new LineMaterial({ color, linewidth: width, transparent: true, opacity });
+  const m = new LineMaterial({ color: col, linewidth: width, transparent: true, opacity });
   m.resolution.set(innerWidth, innerHeight);
   fatMats.push(m);
   return new Line2(g, m);
 }
-const hoverables = [];
-const line = (pts, color, opts = {}) => new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color, transparent: true, ...opts }));
+const line = (pts, col, opts = {}) => new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: col, transparent: true, ...opts }));
+const label = (text, obj) => { const el = Object.assign(document.createElement('div'), { className: 'lbl', textContent: text }); $('#labels').append(el); labels.push([el, obj]); };
 
-for (const s of B.sensors) {
-  const gz = groundH(s.x, s.y), top = toScene(s.x, s.y, gz).add(new THREE.Vector3(0, 0.45, 0));
-  scene.add(line([toScene(s.x, s.y, gz), top], '#151a23'));
-  const head = new THREE.Mesh(new THREE.OctahedronGeometry(0.09), new THREE.MeshStandardMaterial({ color: '#151a23' }));
-  head.position.copy(top);
-  head.castShadow = true;
-  scene.add(head);
-  label(s.id, head);
-  const cfg = S.sensors.find(c => c.id === s.id);
-  head.userData.tip = () => `${s.id}: radio receiver on a ${cfg.mast_m} m mast. It measures the signal power and the direction (bearing) of each drone that it hears.`;
-  hoverables.push(head);
-  s.top = top;
+async function openArea(a, opts = {}) {
+  area = a;
+  Object.assign(state, { rx: 3, dr: 2, seed: 42 }, opts);
+  closeDialog();
+  view = 'scene';
+  B = null;
+  await runEngine(true);
 }
+
 // drone models: models/*.glb at real size, nose -Z, right +X, up +Y; a sphere if one is missing
-const loader = new GLTFLoader(), gltfs = {};
-for (const d of Object.values(B.drones ?? {})) gltfs[d.model] ??= loader.loadAsync(`../${d.model}`).catch(() => null);
-const drones = {};
-for (const id of objIds) {
-  const tr = B.truth[id];
-  truthGroup.add(fatLine(tr.x.map((x, i) => toScene(x, tr.y[i], tr.z[i])), color(id), 3, 0.7));
-  const m = new THREE.Group(), gltf = await gltfs[B.drones?.[id]?.model];
-  const body = gltf ? gltf.scene.clone(true) : new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 12), new THREE.MeshStandardMaterial({ color: color(id) }));
-  const size = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3());
-  body.scale.setScalar(1 / Math.max(size.x, size.y, size.z));  // 1 unit across; the group scales it to DRONE_PX
-  m.add(body);
-  const drop = line([new THREE.Vector3(), new THREE.Vector3()], color(id), { opacity: 0.5 });
-  truthGroup.add(m, drop);
-  label(id, m);
-  const o = S.objects.find(o => o.id === id);
-  const tip = () => `${id}: ${B.drones?.[id]?.name ?? o.type}, ${o.alt_agl_m} m above ground, transmits on ${o.freq_mhz} MHz. This is the true position.`;
-  body.traverse(c => {
-    if (!c.isMesh) return;
-    c.castShadow = true;
-    if (gltf && AIRFRAME.test(c.material.name)) { c.material = c.material.clone(); c.material.color.set(color(id)); }
-    c.userData.tip = tip;
-    hoverables.push(c);
+const loader = new GLTFLoader(), gltfs = {}, models = {};
+const loadModel = path => gltfs[path] ??= loader.loadAsync(`../${path}`).then(g => models[path] = g, () => null);
+
+let reqId = 0, debounce;
+async function runEngine(fit = false) {
+  const id = ++reqId;
+  $('#n-rx').textContent = state.rx;
+  $('#n-dr').textContent = state.dr;
+  document.querySelectorAll('.step button').forEach(b => {
+    const [lo, hi] = LIMITS[b.dataset.k], n = state[b.dataset.k] + +b.dataset.d;
+    b.disabled = n < lo || n > hi;
   });
-  drones[id] = { m, drop };
+  $('#status').textContent = 'Calculating the sensor data…';
+  const res = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ area: area.id, receivers: state.rx, drones: state.dr, seed: state.seed }) });
+  const b = await res.json();
+  if (id !== reqId) return;  // a newer request is on its way
+  if (b.error) { $('#status').textContent = `The engine stopped: ${b.error}`; return; }
+  await Promise.all(Object.values(b.drones ?? {}).map(d => loadModel(d.model)));
+  if (id !== reqId) return;
+  $('#status').textContent = '';
+  history.replaceState(null, '', `?area=${area.id}&rx=${state.rx}&dr=${state.dr}&seed=${state.seed}`);
+  applyBundle(b, fit);
 }
-const bearings = {};
-for (const key in B.links) {
-  const [sid, oid] = key.split('|'), s = B.sensors.find(s => s.id === sid);
-  const l = line([s.top, s.top], color(oid), { opacity: 0.85, depthTest: false });
-  l.renderOrder = 10;
-  sensedGroup.add(l);
-  bearings[key] = { l, s };
-}
-const fixAt = {}, rings = {};
-for (const id of objIds) {
-  fixAt[id] = new Map(B.fused[id].map(f => [f[0], f]));
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 64), new THREE.MeshBasicMaterial({ color: color(id), side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false }));
-  ring.rotation.x = -Math.PI / 2;
-  ring.renderOrder = 11;
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.94, 64), new THREE.MeshBasicMaterial({ color: color(id), side: THREE.DoubleSide, transparent: true, opacity: 0.12, depthTest: false }));
-  disc.renderOrder = 11;
-  ring.add(disc);
-  disc.userData.tip = () => {
-    const i = Math.min(Math.floor(t), N - 1), fx = fixAt[id].get(B.t[i]), tr = B.truth[id];
-    const heard = B.sensors.filter(s => B.links[`${s.id}|${id}`].det[i]).map(s => s.id);
-    const err = Math.hypot(fx[1] - tr.x[i], fx[2] - tr.y[i]);
-    return `Estimated position of ${id}. ${heard.join(' and ')} measured a bearing, and the lines cross here. The circle shows the estimated error (${fx[3]} m). Real error at this moment: ${Math.round(err)} m.`;
-  };
-  hoverables.push(disc);
-  sensedGroup.add(ring);
-  rings[id] = ring;
+document.querySelectorAll('.step button').forEach(b => b.onclick = () => {
+  const [lo, hi] = LIMITS[b.dataset.k];
+  state[b.dataset.k] = Math.min(hi, Math.max(lo, state[b.dataset.k] + +b.dataset.d));
+  $('#n-rx').textContent = state.rx;
+  $('#n-dr').textContent = state.dr;
+  clearTimeout(debounce);
+  debounce = setTimeout(() => runEngine(), 250);
+});
+$('#shuffle').onclick = () => { state.seed = Math.floor(Math.random() * 1e5); runEngine(); };
+$('#back').onclick = showDialog;
+
+function applyBundle(b, fit) {
+  B = b; S = B.scenario; T = B.terrain; N = B.t.length;
+  objIds = Object.keys(B.truth);
+  color = id => COLORS[objIds.indexOf(id) % COLORS.length];
+  if (selected && !B.links[selected]) selected = null;
+
+  // ponytail: rebuild the whole scene on each run (< 50 ms); keep the terrain if that ever gets slow
+  scene?.traverse(o => { o.geometry?.dispose(); if (o.material && !o.material.map) o.material.dispose(); });
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color('#eef0f4');
+  blk = buildBlock(T, B.frame);
+  ({ toScene, groundH } = blk);
+  const w = blk.widthKm;
+  addLights(scene, w, true);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w * 20, w * 20), new THREE.ShadowMaterial({ opacity: 0.16 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.01;
+  floor.receiveShadow = true;
+  world = new THREE.Group();
+  scene.add(floor, blk.group, world);
+  if (fit) {
+    camera.position.set(-w * 0.35, w * 1.2, w * 1.75);
+    controls.target.set(0, blk.baseT, 0);
+  }
+
+  labels.forEach(([el]) => el.remove());
+  labels = []; hoverables = []; fatMats = []; drones = {}; bearings = {}; rings = {}; fixAt = {};
+  const truthGroup = new THREE.Group(), sensedGroup = new THREE.Group();
+  world.add(truthGroup, sensedGroup);
+  world.userData = { truthGroup, sensedGroup };
+
+  for (const s of B.sensors) {
+    const gz = groundH(s.x, s.y), top = toScene(s.x, s.y, gz).add(new THREE.Vector3(0, w * 0.04, 0));
+    world.add(line([toScene(s.x, s.y, gz), top], '#151a23'));
+    const head = new THREE.Mesh(new THREE.OctahedronGeometry(w * 0.008), new THREE.MeshStandardMaterial({ color: '#151a23' }));
+    head.position.copy(top);
+    head.castShadow = true;
+    world.add(head);
+    label(s.id, head);
+    const cfg = S.sensors.find(c => c.id === s.id);
+    head.userData.tip = () => `${s.id}: radio receiver on a ${cfg.mast_m} m mast. It measures the signal power and the direction (bearing) of each drone that it hears.`;
+    hoverables.push(head);
+    s.top = top;
+  }
+  for (const id of objIds) {
+    const tr = B.truth[id];
+    truthGroup.add(fatLine(tr.x.map((x, i) => toScene(x, tr.y[i], tr.z[i])), color(id), 3, 0.7));
+    const m = new THREE.Group(), gltf = models[B.drones?.[id]?.model];
+    const body = gltf ? gltf.scene.clone(true) : new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 12), new THREE.MeshStandardMaterial({ color: color(id) }));
+    const size = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3());
+    body.scale.setScalar(1 / Math.max(size.x, size.y, size.z));  // 1 unit across; the render loop scales it to DRONE_PX
+    m.add(body);
+    const drop = line([new THREE.Vector3(), new THREE.Vector3()], color(id), { opacity: 0.5 });
+    truthGroup.add(m, drop);
+    label(id, m);
+    const o = S.objects.find(o => o.id === id);
+    const tip = () => `${id}: ${B.drones?.[id]?.name ?? o.type}, ${o.alt_agl_m} m above ground, transmits on ${o.freq_mhz} MHz. This is the true position.`;
+    body.traverse(c => {
+      if (!c.isMesh) return;
+      c.castShadow = true;
+      if (gltf && AIRFRAME.test(c.material.name)) { c.material = c.material.clone(); c.material.color.set(color(id)); }
+      c.userData.tip = tip;
+      hoverables.push(c);
+    });
+    drones[id] = { m, drop };
+  }
+  for (const key in B.links) {
+    const [sid, oid] = key.split('|'), s = B.sensors.find(s => s.id === sid);
+    const l = line([s.top, s.top], color(oid), { opacity: 0.85, depthTest: false });
+    l.renderOrder = 10;
+    sensedGroup.add(l);
+    bearings[key] = { l, s };
+  }
+  for (const id of objIds) {
+    fixAt[id] = new Map(B.fused[id].map(f => [f[0], f]));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 64), new THREE.MeshBasicMaterial({ color: color(id), side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.renderOrder = 11;
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.94, 64), new THREE.MeshBasicMaterial({ color: color(id), side: THREE.DoubleSide, transparent: true, opacity: 0.12, depthTest: false }));
+    disc.renderOrder = 11;
+    ring.add(disc);
+    disc.userData.tip = () => {
+      const i = Math.min(Math.floor(t), N - 1), fx = fixAt[id].get(B.t[i]), tr = B.truth[id];
+      const heard = B.sensors.filter(s => B.links[`${s.id}|${id}`].det[i]).map(s => s.id);
+      const err = Math.hypot(fx[1] - tr.x[i], fx[2] - tr.y[i]);
+      return `Estimated position of ${id}. ${heard.join(' and ')} measured a bearing, and the lines cross here. The circle shows the estimated error (${fx[3]} m). Real error at this moment: ${Math.round(err)} m.`;
+    };
+    hoverables.push(disc);
+    sensedGroup.add(ring);
+    rings[id] = ring;
+  }
+
+  buildCards();
+  $('#title h1').textContent = S.name;
+  $('#title .sub').textContent = `${S.region} · ${S.sensors.length} receivers · ${objIds.length} drone${objIds.length === 1 ? '' : 's'} · ${Math.round(S.duration_s / 60)} min`;
+  $('#title .sub2').textContent = `seed ${S.seed} · real terrain · starts ${S.start_utc.replace('T', ' ').replace('Z', ' UTC')}`;
+  $('#zmin').textContent = `${Math.round(blk.zmin)} m`;
+  $('#zmax').textContent = `${Math.round(blk.zmax)} m`;
+  $('#vex').textContent = `vertical ×${blk.vex}`;
+  $('#seek').max = N - 1;
+  t = Math.min(t, N - 1);
+  setShow(show);
+  setGround(ground);
+  lastI = -1;
+  update(true);
 }
 
 // ---- sensor cards ----
-const fmtT = t => new Date(Date.parse(S.start_utc) + t * 1000).toISOString().slice(11, 19);
+const fmtT = s => new Date(Date.parse(S.start_utc) + s * 1000).toISOString().slice(11, 19);
 const PMIN = -130, PMAX = -50, SW = 244, SH = 48;
 const py = p => SH - (Math.min(Math.max(p, PMIN), PMAX) - PMIN) / (PMAX - PMIN) * SH;
-let selected = null;
-for (const s of B.sensors) {
-  const card = Object.assign(document.createElement('div'), { className: 'card' });
-  const links = objIds.map(o => [o, B.links[`${s.id}|${o}`]]);
-  const cardTip = `${s.id} is a radio receiver. The chart shows the signal power that it receives from each drone, in dBm, for the full scenario. A dashed line shows the detection threshold for each drone. Below its threshold, the receiver does not detect that drone. The black line shows the current time.`;
-  card.innerHTML = `<h3>${s.id}<span>received power, dBm<i class="q" data-tip="${cardTip}">?</i></span></h3>
-    <svg viewBox="0 0 ${SW} ${SH}" preserveAspectRatio="none" data-tip="${cardTip}">
-      ${links.map(([o, L]) => `<line x1="0" x2="${SW}" y1="${py(L.noise + s.threshold_db)}" y2="${py(L.noise + s.threshold_db)}" stroke="${color(o)}" stroke-opacity=".6" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`).join('')}
-      ${links.map(([o, L]) => `<polyline fill="none" stroke="${color(o)}" stroke-width="1" vector-effect="non-scaling-stroke" points="${L.power.map((p, i) => `${(i / (N - 1) * SW).toFixed(1)},${py(p).toFixed(1)}`).join(' ')}"/>`).join('')}
-      <line class="cur" x1="0" x2="0" y1="0" y2="${SH}" stroke="#151a23" vector-effect="non-scaling-stroke"/>
-    </svg>
-    ${links.map(([o]) => `<div class="row" data-k="${s.id}|${o}" data-tip="Power and bearing that ${s.id} measures from ${o} now. Click to see the loss breakdown."><i class="dot" style="background:${color(o)}"></i>${o}<span class="v"></span></div>`).join('')}`;
-  $('#cards').append(card);
+function buildCards() {
+  $('#cards').innerHTML = '';
+  for (const s of B.sensors) {
+    const card = Object.assign(document.createElement('div'), { className: 'card' });
+    const links = objIds.map(o => [o, B.links[`${s.id}|${o}`]]);
+    const cardTip = `${s.id} is a radio receiver. The chart shows the signal power that it receives from each drone, in dBm, for the full scenario. A dashed line shows the detection threshold for each drone. Below its threshold, the receiver does not detect that drone. The black line shows the current time.`;
+    card.innerHTML = `<h3>${s.id}<span>received power, dBm<i class="q" data-tip="${cardTip}">?</i></span></h3>
+      <svg viewBox="0 0 ${SW} ${SH}" preserveAspectRatio="none" data-tip="${cardTip}">
+        ${links.map(([o, L]) => `<line x1="0" x2="${SW}" y1="${py(L.noise + s.threshold_db)}" y2="${py(L.noise + s.threshold_db)}" stroke="${color(o)}" stroke-opacity=".6" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`).join('')}
+        ${links.map(([o, L]) => `<polyline fill="none" stroke="${color(o)}" stroke-width="1" vector-effect="non-scaling-stroke" points="${L.power.map((p, i) => `${(i / (N - 1) * SW).toFixed(1)},${py(p).toFixed(1)}`).join(' ')}"/>`).join('')}
+        <line class="cur" x1="0" x2="0" y1="0" y2="${SH}" stroke="#151a23" vector-effect="non-scaling-stroke"/>
+      </svg>
+      ${links.map(([o]) => `<div class="row" data-k="${s.id}|${o}" data-tip="Power and bearing that ${s.id} measures from ${o} now. Click to see the loss breakdown."><i class="dot" style="background:${color(o)}"></i>${o}<span class="v"></span></div>`).join('')}`;
+    $('#cards').append(card);
+  }
+  document.querySelectorAll('.row').forEach(r => r.onclick = () => { selected = selected === r.dataset.k ? null : r.dataset.k; update(true); });
 }
-document.querySelectorAll('.row').forEach(r => r.onclick = () => { selected = selected === r.dataset.k ? null : r.dataset.k; update(true); });
 
 function whyCard(k, i) {
   const [sid, oid] = k.split('|'), L = B.links[k], s = S.sensors.find(s => s.id === sid), o = S.objects.find(o => o.id === oid);
@@ -367,9 +537,8 @@ function whyCard(k, i) {
 $('#why').onclick = e => { if (e.target.classList.contains('close')) { selected = null; update(true); } };
 
 // ---- time + view state ----
-let t = 0, playing = false, show = 'both', lastI = -1;
-$('#seek').max = N - 1;
 function update(force) {
+  if (!B) return;
   const i = Math.min(Math.floor(t), N - 1), f = t - i, j = Math.min(i + 1, N - 1);
   for (const id of objIds) {
     const tr = B.truth[id], lerp = a => a[i] + (a[j] - a[i]) * f;
@@ -392,7 +561,7 @@ function update(force) {
     const x1 = T.x0 + (T.nx - 1) * T.dx, y1 = T.y0 - (T.ny - 1) * T.dy;
     const len = Math.min(ux > 0 ? (x1 - s.x) / ux : ux < 0 ? (T.x0 - s.x) / ux : Infinity,
                          uy > 0 ? (T.y0 - s.y) / uy : uy < 0 ? (y1 - s.y) / uy : Infinity) / 1000;
-    l.geometry.setFromPoints([s.top, s.top.clone().add(new THREE.Vector3(Math.sin(b) * len, 0, -Math.cos(b) * len))]);
+    l.geometry.setFromPoints([s.top, s.top.clone().add(new THREE.Vector3(ux * len, 0, -uy * len))]);
   }
   for (const id of objIds) {
     const fx = fixAt[id].get(B.t[i]), ring = rings[id];
@@ -413,7 +582,22 @@ function update(force) {
   $('#seek').value = t;
   $('#clock').textContent = `${fmtT(B.t[i])} UTC`;
 }
-function setShow(v) { show = v; truthGroup.visible = v !== 'sensed'; sensedGroup.visible = v !== 'truth'; }
+function setShow(v) {
+  show = v;
+  world.userData.truthGroup.visible = v !== 'sensed';
+  world.userData.sensedGroup.visible = v !== 'truth';
+}
+async function setGround(kind) {
+  ground = kind;
+  const b = blk;
+  $('#gname').textContent = { sat: 'Satellite', map: 'Map', elev: 'Elevation' }[kind];
+  $('#credits').textContent = `Terrain: Copernicus GLO-30 · ${GROUND[kind]?.credit ?? 'Elevation tint'} · vertical ×${b.vex}`;
+  if (kind === 'elev') return b.setTexture(null);
+  $('#status').textContent = 'Loading the ground image…';
+  const st = await stitch(kind, area.bbox, Math.min(renderer.capabilities.maxTextureSize, 8192));
+  if ($('#status').textContent === 'Loading the ground image…') $('#status').textContent = '';
+  if (ground === kind) b.setTexture(st);
+}
 function segment(sel, fn) {
   document.querySelectorAll(`${sel} button`).forEach(b => b.onclick = () => {
     document.querySelectorAll(`${sel} button`).forEach(x => x.classList.toggle('on', x === b)); fn(b.dataset.v);
@@ -423,44 +607,45 @@ segment('#ground', setGround);
 segment('#show', setShow);
 $('#play').onclick = () => { playing = !playing; $('#play').textContent = playing ? '❚❚' : '▶'; $('#play').ariaLabel = playing ? 'Pause' : 'Play'; };
 $('#seek').oninput = e => { t = +e.target.value; update(true); };
-addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); $('#play').click(); } });
-
-// ---- header + legend ----
-$('#title h1').textContent = S.name;
-$('#title .sub').textContent = `${S.region} · ${S.sensors.length} receivers · ${objIds.length} drones · ${Math.round(S.duration_s / 60)} min`;
-$('#title .sub2').textContent = `seed ${S.seed} · real terrain · starts ${S.start_utc.replace('T', ' ').replace('Z', ' UTC')}`;
-$('#zmin').textContent = `${Math.round(zmin)} m`;
-$('#zmax').textContent = `${Math.round(zmax)} m`;
-$('#vex').textContent = `vertical ×${VEX}`;
+addEventListener('keydown', e => { if (e.code === 'Space' && view === 'scene') { e.preventDefault(); $('#play').click(); } });
 
 // ---- loop ----
-const ctr = toScene(0, 0, zmin);
-controls.target.copy(ctr);
-const v = new THREE.Vector3();
+const v3 = new THREE.Vector3();
 let last = performance.now();
 renderer.setAnimationLoop(now => {
   const dt = (now - last) / 1000; last = now;
+  if (view === 'dialog') {
+    for (const p of previews) { p.g.rotation.y += dt * 0.15; p.r.render(p.scene, p.cam); }
+    return;
+  }
+  if (!B) return;
   if (playing) { t += dt * +$('#speed').value; if (t >= N - 1) { t = N - 1; $('#play').click(); } update(); }
   controls.update();
   const px = 2 * Math.tan(camera.fov * Math.PI / 360) * DRONE_PX / innerHeight;
   for (const id of objIds) drones[id].m.scale.setScalar(camera.position.distanceTo(drones[id].m.position) * px);
   renderer.render(scene, camera);
   for (const [el, obj] of labels) {
-    v.setFromMatrixPosition(obj.matrixWorld).project(camera);
-    el.style.display = obj.parent?.visible === false || v.z > 1 ? 'none' : '';
-    el.style.left = `${(v.x + 1) / 2 * innerWidth}px`;
-    el.style.top = `${(1 - v.y) / 2 * innerHeight}px`;
+    v3.setFromMatrixPosition(obj.matrixWorld).project(camera);
+    let shown = v3.z <= 1;
+    for (let o = obj; o; o = o.parent) if (!o.visible) shown = false;
+    el.style.display = shown ? '' : 'none';
+    el.style.left = `${(v3.x + 1) / 2 * innerWidth}px`;
+    el.style.top = `${(1 - v3.y) / 2 * innerHeight}px`;
   }
 });
-addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); fatMats.forEach(m => m.resolution.set(innerWidth, innerHeight)); });
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
+  fatMats.forEach(m => m.resolution.set(innerWidth, innerHeight));
+});
 
 // ---- tooltips: HTML elements with data-tip, and 3D objects with userData.tip ----
 const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
-const shown = o => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+const visible = o => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
 function pick3D(e) {
+  if (view !== 'scene' || !B) return null;
   ptr.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
   ray.setFromCamera(ptr, camera);
-  return ray.intersectObjects(hoverables.filter(shown), false)[0]?.object.userData.tip();
+  return ray.intersectObjects(hoverables.filter(visible), false)[0]?.object.userData.tip();
 }
 addEventListener('pointermove', e => {
   const tip = $('#tip'), text = e.target.closest?.('[data-tip]')?.dataset.tip ?? (e.target === renderer.domElement ? pick3D(e) : null);
@@ -471,14 +656,21 @@ addEventListener('pointermove', e => {
   tip.style.left = `${e.clientX + 14 + w > innerWidth ? e.clientX - 14 - w : e.clientX + 14}px`;
   tip.style.top = `${e.clientY + 14 + h > innerHeight ? e.clientY - 14 - h : e.clientY + 14}px`;
 });
-// deep link to one moment: ?t=<seconds>&ground=sat|map|elev&show=truth|sensed|both&sel=RF1|drone_01
-const q = new URLSearchParams(location.search);
-t = Math.min(+(q.get('t') ?? 0), N - 1);
-selected = q.get('sel');
-document.querySelector(`#show [data-v="${q.get('show') ?? 'both'}"]`)?.click();
-$('#status').textContent = '';
-document.querySelector(`#ground [data-v="${q.get('ground') ?? 'sat'}"]`)?.click();
-update(true);
+
+// ---- start: area picker, or a direct link ----
+// ?area=<id>&rx=3&dr=2&seed=42&t=<seconds>&ground=sat|map|elev&show=truth|sensed|both&sel=RF1|drone_01
+const q = new URLSearchParams(location.search), startArea = AREAS.find(a => a.id === q.get('area'));
+if (startArea) {
+  t = +(q.get('t') ?? 0);
+  selected = q.get('sel');
+  ground = q.get('ground') ?? 'sat';
+  show = q.get('show') ?? 'both';
+  document.querySelectorAll('#ground button').forEach(b => b.classList.toggle('on', b.dataset.v === ground));
+  document.querySelectorAll('#show button').forEach(b => b.classList.toggle('on', b.dataset.v === show));
+  await openArea(startArea, { rx: +(q.get('rx') ?? 3), dr: +(q.get('dr') ?? 2), seed: +(q.get('seed') ?? 42) });
+} else {
+  showDialog();
+}
 </script>
 </body>
 </html>
