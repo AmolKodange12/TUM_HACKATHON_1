@@ -40,6 +40,24 @@ The URL always holds the current layout, so you can share it. Example: `viewer/?
 
 Two more sources: `viewer/?game=<area>&huts=<lat,lon;...>&birds=6&seed=3` replays a round of the bird game, and `viewer/?planned=1` shows the last scenario from the planner.
 
+## Export
+
+**Export data (.zip)** in the viewer downloads the run that is on the screen (`GET /api/export?run=<folder in out/>`). The ZIP holds:
+
+- every CSV and `fused.cot.xml` from the run,
+- `scenario.json`: run `python sim.py scenario.json out` to get byte-identical files again,
+- `manifest.json`: the scenario facts, the sensors, the engine commit, and for each file its role, row count and a description,
+- `README.txt`: a short guide to the roles.
+
+Each file has one role:
+
+| Role | Files | Use |
+|---|---|---|
+| sensor data | `*_raw.csv`, `fused.cot.xml` | What the sensors report. `source_object_id` is the label |
+| answer key | `truth.csv`, `fused.csv` | The truth. Keep it away from a model under test |
+| explanation | `*_budget.csv` | Why each value is what it is, for every second |
+| input | `scenario.json` | The exact scenario and seed |
+
 ## Planner (`planner/`)
 
 Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), click to place receivers, and add drones: choose a type and click its waypoints, or add N random drones of one or mixed types. Each drone's height, speed, loop and radio (frequency, EIRP, bandwidth) can be changed; a new type brings its own radio and cruise speed from `drones.json`. Markers drag; right-click a waypoint to delete it. **Run simulation** sends the scenario to `serve.py` (`POST /api/simulate`), which runs it into `out/planned/` and opens the replay. **Download JSON** saves it as a scenario file.

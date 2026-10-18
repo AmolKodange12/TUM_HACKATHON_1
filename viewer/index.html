@@ -57,6 +57,7 @@
   .step button:disabled { opacity: .35; cursor: default; }
   .acts { display: flex; gap: 6px; margin-top: 8px; }
   .acts button { flex: 1; border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 5px 6px; cursor: pointer; font-size: 12px; }
+  .acts .btn { flex: 1; text-align: center; text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 5px 6px; font-size: 12px; }
   .acts button.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
   #legend { margin-top: auto; width: 280px; }
   .pill { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; font-size: 11px; letter-spacing: .5px; padding: 4px 10px; border-radius: 99px; text-transform: uppercase; }
@@ -162,6 +163,9 @@
       <button id="back" data-tip="Go back to the area list.">← Areas</button>
       <button id="planner" data-tip="Place receivers and draw drone paths yourself.">Planner</button>
       <button id="shuffle" class="dark" data-tip="Put all receivers and drones in new random positions.">New layout</button>
+    </div>
+    <div class="acts">
+      <a id="export" class="btn" download data-tip="Download all data of this run as a ZIP: the truth, each sensor's records, the TAK events, the link budgets and the scenario. manifest.json tells which files are the answer key.">Export data (.zip)</a>
     </div>
   </div>
   <details class="card" id="layers" open>
@@ -679,6 +683,9 @@ document.querySelectorAll('#settings [data-s]').forEach(el => el[el.tagName === 
 });
 $('#back').onclick = showDialog;
 $('#planner').onclick = () => { location.href = '../planner/'; };
+// the run folder in out/ that the server wrote for the current source
+const runDir = () => source.kind === 'planned' ? 'planned' : source.kind === 'game' ? `game-${area.id}` : area.id;
+$('#export').onclick = () => { $('#export').href = `/api/export?run=${encodeURIComponent(runDir())}`; };
 // Simple <-> Pro: the bird game gets the same area, stations, round and moment
 function simpleUrl() {
   if (view !== 'scene' || !B) return '../cute/';
