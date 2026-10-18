@@ -1,0 +1,27 @@
+{
+  "name": "Kaniv Ridge",
+  "region": "Cherkasy Oblast, Ukraine",
+  "bbox": [31.40, 49.68, 31.56, 49.80],
+  "start_utc": "2026-11-03T14:00:00Z",
+  "duration_s": 1200,
+  "dt_s": 1.0,
+  "seed": 42,
+  "shadowing_db": 4.0,
+  "shadowing_tau_s": 15.0,
+  "sensors": [
+    {"id": "RF1", "lat": 49.700, "lon": 31.500, "mast_m": 10, "gain_dbi": 6, "noise_figure_db": 6,
+     "threshold_db": 6, "bearing_sigma_deg": 2.0, "bearing_bias_deg": 0.8},
+    {"id": "RF2", "lat": 49.712, "lon": 31.420, "mast_m": 10, "gain_dbi": 6, "noise_figure_db": 6,
+     "threshold_db": 6, "bearing_sigma_deg": 2.0, "bearing_bias_deg": -1.2},
+    {"id": "RF3", "lat": 49.775, "lon": 31.530, "mast_m": 15, "gain_dbi": 6, "noise_figure_db": 7,
+     "threshold_db": 6, "bearing_sigma_deg": 3.0, "bearing_bias_deg": 0.4}
+  ],
+  "objects": [
+    {"id": "drone_01", "type": "quadcopter", "freq_mhz": 2437.5, "eirp_dbm": 27, "bandwidth_mhz": 10,
+     "alt_agl_m": 60, "speed_ms": 12,
+     "waypoints": [[49.790, 31.440], [49.760, 31.470], [49.735, 31.470], [49.715, 31.455], [49.690, 31.480]]},
+    {"id": "drone_02", "type": "fixed-wing", "freq_mhz": 5800.0, "eirp_dbm": 30, "bandwidth_mhz": 20,
+     "alt_agl_m": 250, "speed_ms": 28, "loop": true,
+     "waypoints": [[49.780, 31.420], [49.785, 31.540], [49.700, 31.545], [49.695, 31.430]]}
+  ]
+}
