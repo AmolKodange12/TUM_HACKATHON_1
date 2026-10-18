@@ -1,16 +1,25 @@
 """Faithfulness checks. Run: python test_sim.py (or pytest)."""
 import filecmp
+import json
 import tempfile
+from pathlib import Path
 
 import numpy as np
 
+import flight
 import sim
 
 BBOX = [31.40, 49.68, 31.56, 49.80]
+DRONES = json.loads((Path(__file__).parent / "drones.json").read_text())
 
 
 def flat(height=100.0):
     return sim.Terrain(np.full((200, 200), height), BBOX)
+
+
+def ll(x, y):
+    lat, lon = flat().latlon(x, y)
+    return {"lat": float(lat), "lon": float(lon)}
 
 
 def test_power_falls_with_distance_on_flat_ground():
@@ -44,6 +53,35 @@ def test_crossed_bearings_find_the_target():
     b = np.degrees(np.arctan2(*(target - pts).T)) % 360
     est, ce = sim.cross_bearings(pts, b, np.array([2.0, 2.0]))
     assert np.hypot(*(est - target)) < 1 and ce > 0
+
+
+def test_quadcopter_respects_its_limits_and_lands_on_target():
+    q = DRONES["quadcopter"]
+    obj = {"id": "q", "start": {**ll(0, 0), "alt_m": 0}, "plan": [
+        {"takeoff": {"alt_m": 100}}, {"goto": {**ll(0, 2000), "speed_mps": 15}}, {"hover": {"duration_s": 30}},
+        {"goto": ll(0, 0)}, {"land": {}}]}
+    tr = flight.fly(q, obj, flat().xy)
+    vh = np.hypot(tr[:, 5], tr[:, 6])
+    acc = np.linalg.norm(np.diff(tr[:, 5:7], axis=0), axis=1) / flight.DT
+    tilt = np.degrees(np.arccos(np.cos(np.radians(tr[:, 10])) * np.cos(np.radians(tr[:, 11]))))
+    assert vh.max() <= 15.01 and acc.max() <= q["flight"]["max_accel_mps2"] + 1e-6
+    assert tilt.max() <= q["flight"]["max_tilt_deg"] + 0.5
+    hover = tr[tr[:, 1] == 2]
+    assert np.hypot(hover[:, 2], hover[:, 3] - 2000).max() < 1.0
+    assert tr[-1, 4] == 0 and np.hypot(tr[-1, 2], tr[-1, 3]) < 1.0
+
+
+def test_fixed_wing_banks_and_holds_an_orbit_in_wind():
+    r = DRONES["fixed_wing_recon"]
+    obj = {"id": "r", "start": {**ll(-6000, 0), "alt_m": 1500, "heading_deg": 90}, "plan": [
+        {"orbit": {**ll(0, 0), "radius_m": 1500, "duration_s": 3600, "speed_mps": 30}}]}
+    tr = flight.fly(r, obj, flat().xy, flight.wind_xy({"from_deg": 270, "speed_mps": 15}))
+    late = tr[tr[:, 0] > 900]
+    gs = np.hypot(late[:, 5], late[:, 6])
+    assert np.abs(np.hypot(late[:, 2], late[:, 3]) - 1500).max() < 100
+    assert np.abs(tr[:, 11]).max() <= r["flight"]["max_bank_deg"] + 1e-6
+    assert gs.max() - gs.min() > 25  # ~30 +/- 15 m/s over the ground around the circle
+    assert np.abs(late[:, 8] - 30).max() < 0.01  # airspeed held
 
 
 def test_same_seed_same_bytes():
