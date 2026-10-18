@@ -159,6 +159,58 @@ def cross_bearings(points, bearings_deg, sigmas_deg):
     return est, float(math.sqrt(np.trace(cov)))
 
 
+def p_detect(snr_db, threshold_db, shadowing_db):
+    """Chance that SNR minus log-normal shadowing still clears the threshold."""
+    z = (np.asarray(snr_db) - threshold_db) / max(shadowing_db, 1e-6)
+    return 0.5 * (1 + np.vectorize(math.erf)(z / math.sqrt(2)))
+
+
+def coverage(terrain, sensors, emitter, alts, shadowing_db, n=40):
+    """Where a drone with this emitter can be heard and located, per height above ground.
+
+    For a grid over the box: heard = chance at least one receiver detects it, located = chance
+    at least two do (a fix needs two bearings), err = expected fix error in metres from the
+    bearing noise and the crossing geometry of the receivers that probably hear it (NaN if fewer
+    than two). Same terrain and radio physics as the per-second links. Arrays are [alt, row, col],
+    rows north -> south like the terrain grid.
+    """
+    xe, ys = terrain.xy(terrain.bbox[1], terrain.bbox[2])
+    nx = n
+    ny = max(2, round(n * (terrain.yn - ys) / (xe - terrain.xw)))
+    dx, dy = (xe - terrain.xw) / nx, (terrain.yn - ys) / ny
+    gx, gy = np.meshgrid(terrain.xw + dx * (np.arange(nx) + 0.5), terrain.yn - dy * (np.arange(ny) + 0.5))
+    gx, gy = gx.ravel(), gy.ravel()
+    ground = terrain.h(gx, gy)
+    heard, located, err = [], [], []
+    for alt in alts:
+        tx = np.stack([gx, gy, ground + alt], 1)
+        ps, normal, n_heard = [], np.zeros((len(gx), 3)), 0  # normal matrix entries: xx, xy, yy
+        for s in sensors:
+            rx = np.array([s["x"], s["y"], s["z"]])
+            _, fspl, diff, _ = path_loss(terrain, rx, tx, emitter["freq_mhz"])
+            noise = -174 + 60 + s["noise_figure_db"] + 10 * math.log10(emitter["bandwidth_mhz"])
+            snr = emitter["eirp_dbm"] + s["gain_dbi"] - fspl - diff - noise
+            p = p_detect(snr, s["threshold_db"], shadowing_db)
+            ps.append(p)
+            b = np.arctan2(gx - s["x"], gy - s["y"])
+            r = np.maximum(np.hypot(gx - s["x"], gy - s["y"]), 1.0)
+            w2 = (p >= 0.5) / (r * np.radians(bearing_sigma(snr, s["bearing_sigma_deg"]))) ** 2
+            n_heard = n_heard + (p >= 0.5)
+            normal += w2[:, None] * np.stack([np.cos(b) ** 2, -np.cos(b) * np.sin(b), np.sin(b) ** 2], 1)
+        ps = np.array(ps)
+        miss = np.prod(1 - ps, axis=0)
+        exactly_one = sum(ps[k] * np.prod(np.delete(1 - ps, k, axis=0), axis=0) for k in range(len(ps)))
+        det = normal[:, 0] * normal[:, 2] - normal[:, 1] ** 2
+        # ponytail: ignores receiver bias and the fusion's <10 deg crossing cut; good enough to compare places
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ce = np.where((n_heard >= 2) & (det > 0), np.sqrt((normal[:, 0] + normal[:, 2]) / det), np.nan)
+        heard.append((1 - miss).reshape(ny, nx))
+        located.append((1 - miss - exactly_one).clip(0, 1).reshape(ny, nx))
+        err.append(ce.reshape(ny, nx))
+    grid = {"nx": nx, "ny": ny, "x0": terrain.xw + dx / 2, "y0": terrain.yn - dy / 2, "dx": dx, "dy": dy}
+    return grid, np.array(heard), np.array(located), np.array(err)
+
+
 def run(scenario_path, out_dir):
     sc = json.loads(Path(scenario_path).read_text())
     out = Path(out_dir)
@@ -174,6 +226,9 @@ def run(scenario_path, out_dir):
         if o["type"] not in drones or o["type"].startswith("_"):
             raise ValueError(f"{o['id']}: unknown type {o['type']!r}, use one of "
                              f"{', '.join(k for k in drones if not k.startswith('_'))} (drones.json)")
+    # radio and speed default to the drone type's; anything the scenario sets wins
+    sc["objects"] = [{**{k: v for k, v in drones[o["type"]]["emitter"].items() if k != "what"},
+                      "speed_ms": drones[o["type"]]["flight"]["cruise_speed_mps"], **o} for o in sc["objects"]]
 
     truth = {}
     with open(out / "truth.csv", "w", newline="") as fh:
@@ -267,6 +322,22 @@ def run(scenario_path, out_dir):
     (out / "fused.cot.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<events>\n' + "\n".join(events) + "\n</events>\n")
     (out / "scenario.json").write_text(json.dumps(sc, indent=2))
 
+    # Coverage heatmap, once per distinct emitter (drones of one type usually share one).
+    cov_cfg = sc.get("coverage", {})
+    alts = cov_cfg.get("alts_agl_m", [50, 100, 250, 500, 1000])
+    cov = {"alts": alts, "emitters": {}, "object_emitter": {}}
+    for o in sc["objects"]:
+        key = f"{o['freq_mhz']}|{o['eirp_dbm']}|{o['bandwidth_mhz']}"
+        cov["object_emitter"][o["id"]] = key
+        if key in cov["emitters"]:
+            continue
+        grid, heard, located, err = coverage(terrain, sensors, o, alts, sc["shadowing_db"], cov_cfg.get("grid", 40))
+        cov |= grid
+        pct = lambda a: [int(v) for v in np.rint(a.ravel() * 100)]
+        cov["emitters"][key] = {"label": f"{o['freq_mhz'] / 1000:.2f} GHz · {o['eirp_dbm']} dBm",
+                                "heard": pct(heard), "located": pct(located),
+                                "err": [-1 if np.isnan(v) else int(round(min(v, 99_999))) for v in err.ravel()]}
+
     # Viewer bundle: downsampled terrain + every series in the local metre frame.
     step = max(1, math.ceil(max(terrain.z.shape) / 256))
     zs = terrain.z[::step, ::step]
@@ -286,6 +357,7 @@ def run(scenario_path, out_dir):
                                    for k in ("power", "snr", "det", "bearing", "sigma", "dist", "fspl", "diff", "shadow")}
                   | {"noise": round(L["noise"], 1)} for (sid, oid), L in links.items()},
         "fused": fused,
+        "coverage": cov,
     }
     (out / "bundle.json").write_text(json.dumps(bundle, separators=(",", ":")))
     return links, fused, ts

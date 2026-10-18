@@ -55,6 +55,20 @@ def test_crossed_bearings_find_the_target():
     assert np.hypot(*(est - target)) < 1 and ce > 0
 
 
+def test_coverage_falls_with_distance_and_needs_two_receivers():
+    t = flat()
+    rx = lambda x, y: {"x": x, "y": y, "z": 110.0, "gain_dbi": 6, "noise_figure_db": 6, "threshold_db": 6, "bearing_sigma_deg": 2.0}
+    em = {"freq_mhz": 2437.5, "eirp_dbm": 10, "bandwidth_mhz": 10}
+    grid, heard, located, err = sim.coverage(t, [rx(0.0, 0.0)], em, [100], 4.0, n=20)
+    row = heard[0, grid["ny"] // 2]  # west -> east through the receiver
+    mid = grid["nx"] // 2
+    assert row[mid] > 0.99 and np.all(np.diff(row[mid:]) <= 1e-9) and row[-1] < row[mid]
+    assert located.max() < 1e-9 and np.isnan(err).all()  # one receiver hears, but cannot locate
+    strong = {**em, "eirp_dbm": 27}
+    _, _, located2, err2 = sim.coverage(t, [rx(-3000.0, 0.0), rx(3000.0, 0.0)], strong, [100], 4.0, n=20)
+    assert located2.max() > 0.9 and np.nanmin(err2) < 400  # best off the baseline, where the bearings cross square
+
+
 def test_quadcopter_respects_its_limits_and_lands_on_target():
     q = DRONES["quadcopter"]
     obj = {"id": "q", "start": {**ll(0, 0), "alt_m": 0}, "plan": [

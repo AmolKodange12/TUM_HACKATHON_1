@@ -10,8 +10,10 @@
   :root {
     --bg: #eef0f4; --ink: #151a23; --muted: #6b7280; --faint: #9ca3af;
     --card: rgba(255,255,255,.82); --line: #e2e5ea; --accent: #2f6b4f;
+    --located: #0ca30c; --heard: #fab219; --unseen: #898781;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.4 Inter, system-ui, sans-serif; overflow: hidden; }
   canvas { display: block; }
   .ui { position: absolute; pointer-events: none; }
@@ -20,30 +22,54 @@
   #title h1 { margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -.5px; text-transform: uppercase; }
   #title .sub { color: var(--muted); font-size: 16px; margin-top: 4px; }
   #title .sub2 { color: var(--faint); font-size: 13px; margin-top: 4px; }
-  #legend { left: 36px; bottom: 96px; width: 280px; }
+  #plan { pointer-events: auto; display: inline-block; margin-top: 10px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; font-weight: 600; font-size: 12px; text-decoration: none; backdrop-filter: blur(6px); }
+  #plan:hover { background: #fff; }
+  #left { left: 24px; top: 196px; bottom: 96px; width: 304px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding: 0 4px 2px 12px; }
+  #legend { margin-top: auto; width: 280px; }
   .pill { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; font-size: 11px; letter-spacing: .5px; padding: 4px 10px; border-radius: 99px; text-transform: uppercase; }
-  #legend h2 { margin: 12px 0 2px; font-size: 26px; font-weight: 800; }
+  #legend h2 { margin: 8px 0 2px; font-size: 20px; font-weight: 800; }
   #legend .src { color: var(--muted); margin-bottom: 8px; }
   #ramp { height: 12px; border-radius: 2px; background: linear-gradient(90deg, #4f6b2f, #8a8f45, #c9b97a, #ece2bd); }
   .ramp-l { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 4px; }
   .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 2px; margin: 10px 8px 0 0; backdrop-filter: blur(6px); }
   .seg button { border: 0; background: none; font: inherit; font-size: 12px; padding: 5px 10px; border-radius: 6px; color: var(--muted); cursor: pointer; }
   .seg button.on { background: var(--ink); color: #fff; }
+  .seg button:disabled { opacity: .4; cursor: default; }
+  .card .seg { margin: 0 6px 8px 0; background: #fff; }
   #bar { left: 50%; transform: translateX(-50%); bottom: 28px; width: min(760px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; backdrop-filter: blur(6px); }
   #play { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--ink); color: #fff; cursor: pointer; font-size: 12px; }
   #seek { flex: 1; accent-color: var(--ink); }
   #clock { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 92px; }
-  #speed { font: inherit; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 3px; }
+  #speed, .card select { font: inherit; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 3px; }
   #cards { top: 24px; right: 24px; width: 268px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100% - 120px); overflow-y: auto; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(6px); }
   .card h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }
   .card h3 span { color: var(--faint); font-weight: 400; }
   .card svg { width: 100%; height: 48px; display: block; }
+  details.card > summary { font-size: 13px; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; margin-bottom: 0; }
+  details.card > summary::after { content: '▾'; color: var(--faint); }
+  details.card:not([open]) > summary::after { content: '▸'; }
+  details.card[open] > summary { margin-bottom: 8px; }
+  .opt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; color: var(--muted); }
+  .opt select, .opt input[type=range] { width: 150px; }
+  .opt input[type=range] { accent-color: var(--ink); }
+  .checks { display: grid; grid-template-columns: repeat(3, auto); gap: 3px 10px; margin: 8px 0 4px; }
+  .pair { display: flex; gap: 6px; } .pair select { flex: 1; min-width: 0; }
+  .opt #h-alt { flex: 1; width: auto; min-width: 0; } .opt #h-alt-l { min-width: 98px; white-space: nowrap; }
+  .inline { display: flex; align-items: center; gap: 4px; color: var(--ink); cursor: pointer; } .inline input { accent-color: var(--ink); margin: 0; }
+  .checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .checks input { accent-color: var(--ink); margin: 0; }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); font-size: 12px; margin: 2px 0 6px; }
+  .keys i, .st i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: 0; }
+  .hint { color: var(--faint); font-size: 12px; }
+  #h-ramp { height: 10px; border-radius: 2px; margin-top: 4px; }
   .row { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 6px; cursor: pointer; font-variant-numeric: tabular-nums; }
   .row:hover, .row.sel { background: rgba(0,0,0,.05); }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
   .row .v { margin-left: auto; color: var(--ink); }
   .row .v.off { color: var(--faint); }
+  .drow .v { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .drow .st { color: var(--ink); }
   #why { right: 304px; bottom: 96px; width: 300px; display: none; }
   #why table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   #why td { padding: 2px 0; }
@@ -54,24 +80,53 @@
   #why .verdict { margin-top: 8px; font-weight: 600; }
   #why .close { cursor: pointer; color: var(--faint); }
   #credits { right: 24px; bottom: 8px; color: var(--faint); font-size: 11px; pointer-events: none; }
-  #status { left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--muted); }
+  #status { left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--muted); text-align: center; }
+  #status a { color: var(--ink); font-weight: 600; }
   #tip { position: fixed; display: none; max-width: 280px; background: #151a23; color: #fff; font-size: 12px; line-height: 1.45; padding: 7px 10px; border-radius: 8px; pointer-events: none; z-index: 10; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
-  .q { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: #e5e7eb; color: var(--muted); font-size: 10px; font-weight: 600; cursor: help; margin-left: 4px; }
-  .lbl { position: absolute; font-size: 11px; font-weight: 600; color: var(--ink); background: rgba(255,255,255,.85); padding: 1px 5px; border-radius: 4px; transform: translate(-50%, -140%); white-space: nowrap; pointer-events: none; }
-  @media (max-width: 760px) { #cards, #why { display: none !important; } #title h1 { font-size: 28px; } #title { left: 16px; } #legend { left: 16px; } }
+  .q { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: #e5e7eb; color: var(--muted); font-size: 10px; font-weight: 600; font-style: normal; cursor: help; margin-left: 4px; }
+  .lbl { position: absolute; font-size: 11px; font-weight: 600; color: var(--ink); background: rgba(255,255,255,.85); padding: 1px 5px; border-radius: 4px; transform: translate(-50%, -180%); white-space: nowrap; pointer-events: none; }
+  .lbl.hot { background: var(--ink); color: #fff; }
+  @media (max-width: 760px) { #cards, #why, #left .card { display: none !important; } #title h1 { font-size: 28px; } #title { left: 16px; } #left { left: 4px; top: auto; } }
 </style>
 </head>
 <body>
-<div id="title" class="ui"><h1></h1><div class="sub"></div><div class="sub2"></div></div>
-<div id="legend" class="ui">
-  <span class="pill">Real terrain</span>
-  <h2 id="gname">Satellite</h2>
-  <div class="src">Elevation: Copernicus GLO-30 · ESA</div>
-  <div id="ramp"></div>
-  <div class="ramp-l"><span id="zmin"></span><span id="vex"></span><span id="zmax"></span></div>
-  <div>
-    <div class="seg" id="ground"><button data-v="sat" class="on">Satellite</button><button data-v="map">Map</button><button data-v="elev">Elevation</button></div>
-    <div class="seg" id="show"><button data-v="truth" data-tip="Show where the drones really were.">Truth</button><button data-v="sensed" data-tip="Show what the receivers measured. A coloured line from a receiver is a measured bearing. A circle is a position from crossed bearings.">Sensed</button><button data-v="both" class="on" data-tip="Show the truth and the measurements together.">Both</button></div>
+<div id="title" class="ui"><h1></h1><div class="sub"></div><div class="sub2"></div><a id="plan" href="../planner/">Plan a new scenario</a></div>
+<div id="left" class="ui">
+  <details class="card" id="layers" open>
+    <summary>Layers</summary>
+    <div class="pair"><select id="o-path" aria-label="Path"><option value="full">Full path</option><option value="flown">Flown so far</option><option value="trail">Last minute</option><option value="off">No path</option></select><select id="o-color" aria-label="Path colour"><option value="drone">Drone colours</option><option value="certainty">Certainty colours</option></select></div>
+    <div class="keys" id="cert-keys" hidden><span><i style="background:var(--located)"></i>Located</span><span><i style="background:var(--heard)"></i>Heard by one only</span><span><i style="background:var(--unseen)"></i>Unseen</span></div>
+    <div class="checks">
+      <label data-tip="A band around the path, as wide as the position error of each fix (up to 500 m each side). Narrow and solid means the receivers pinned the drone down; wide and faint means they barely did."><input type="checkbox" id="o-ribbon" checked>Error band</label>
+      <label><input type="checkbox" id="o-labels" checked>Labels</label>
+      <label><input type="checkbox" id="o-drops" checked>Heights</label>
+      <label><input type="checkbox" id="o-bearings" checked>Bearings</label>
+      <label><input type="checkbox" id="o-fixes" checked>Fixes</label>
+      <label><input type="checkbox" id="o-receivers" checked>Receivers</label>
+    </div>
+    <label class="opt">Drone size <input type="range" id="o-size" min="24" max="140" value="44"></label>
+  </details>
+  <details class="card" id="heat" open>
+    <summary>Coverage heatmap</summary>
+    <div id="heat-body">
+      <div class="seg" id="h-metric"><button data-v="off" class="on">Off</button><button data-v="located" data-tip="Chance that at least two receivers hear a drone here, so its position can be fixed from crossed bearings.">Located</button><button data-v="heard" data-tip="Chance that at least one receiver hears a drone here.">Heard</button><button data-v="err" data-tip="Expected position error of a fix here. Darker means more precise.">Error</button></div>
+      <div class="opt"><span id="h-alt-l">Height</span><input type="range" id="h-alt" min="0" max="0" step="1" value="0" aria-label="Height above ground"><label class="inline" data-tip="Show every height at once, as a cloud of points."><input type="checkbox" id="h-3d">3D</label></div>
+      <label class="opt">Radio <select id="h-em"></select></label>
+      <div id="h-ramp"></div>
+      <div class="ramp-l"><span id="h-lo"></span><span id="h-what"></span><span id="h-hi"></span></div>
+    </div>
+    <div class="hint" id="heat-none" hidden>This run has no coverage data. Run the scenario again.</div>
+  </details>
+  <div id="legend">
+    <span class="pill">Real terrain</span>
+    <h2 id="gname">Satellite</h2>
+    <div class="src">Elevation: Copernicus GLO-30 · ESA</div>
+    <div id="ramp"></div>
+    <div class="ramp-l"><span id="zmin"></span><span id="vex"></span><span id="zmax"></span></div>
+    <div>
+      <div class="seg" id="ground"><button data-v="sat" class="on">Satellite</button><button data-v="map">Map</button><button data-v="elev">Elevation</button></div>
+      <div class="seg" id="show"><button data-v="truth" data-tip="Show where the drones really were.">Truth</button><button data-v="sensed" data-tip="Show what the receivers measured. A coloured line from a receiver is a measured bearing. A circle is a position from crossed bearings.">Sensed</button><button data-v="both" class="on" data-tip="Show the truth and the measurements together.">Both</button></div>
+    </div>
   </div>
 </div>
 <div id="cards" class="ui"></div>
@@ -102,14 +157,24 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const VEX = 4;  // vertical exaggeration
-const DRONE_PX = 44;  // drones are drawn this many pixels across at any zoom; at real size they would be invisible
 const AIRFRAME = /grey|foam/;  // painted model parts take the drone's colour; black, glass and metal parts stay
-const COLORS = ['#e4572e', '#2e86ab', '#8e44ad', '#d4a017', '#16a085'];
-const B = await (await fetch('../out/bundle.json')).json();
-const S = B.scenario, T = B.terrain, F = B.frame, N = B.t.length;
+// categorical palette, fixed order; drones past the 8th are grey and carry identity by label only
+const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+const STATUS = { located: '#0ca30c', heard: '#fab219', none: '#898781' };
+const STATUS_TEXT = { located: 'located', heard: 'heard', none: 'unseen' };
+const HEAT_RAMP = ['#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b'];
+const PROP_SPIN = 40;  // rad/s while playing; real props are far faster, this reads as "spinning"
 const $ = s => document.querySelector(s);
+const res = await fetch('../out/bundle.json', { cache: 'no-store' }).catch(() => null);
+if (!res?.ok) {
+  $('#status').innerHTML = 'No simulation yet. <a href="../planner/">Plan a scenario</a> or run <code>sim.py</code>.';
+  throw new Error('out/bundle.json missing');
+}
+const B = await res.json();
+const S = B.scenario, T = B.terrain, F = B.frame, N = B.t.length;
 const objIds = Object.keys(B.truth);
-const color = id => COLORS[objIds.indexOf(id) % COLORS.length];
+const color = id => PALETTE[objIds.indexOf(id)] ?? '#898781';
+const opt = { path: 'full', colorBy: 'drone', ribbon: true, labels: true, drops: true, bearings: true, fixes: true, receivers: true, size: 44 };
 
 // ---- terrain grid helpers (local metres: x east, y north) ----
 const zs = T.z, zmin = Math.min(...zs), zmax = Math.max(...zs);
@@ -243,10 +308,10 @@ async function setGround(kind) {
 }
 
 // ---- sensors, drones, paths, bearings, fixes ----
-const truthGroup = new THREE.Group(), sensedGroup = new THREE.Group();
-scene.add(truthGroup, sensedGroup);
+const truthGroup = new THREE.Group(), sensedGroup = new THREE.Group(), sensorGroup = new THREE.Group();
+scene.add(truthGroup, sensedGroup, sensorGroup);
 const labels = [];
-const label = (text, obj) => { const el = Object.assign(document.createElement('div'), { className: 'lbl', textContent: text }); $('#labels').append(el); labels.push([el, obj]); };
+const label = (text, obj) => { const el = Object.assign(document.createElement('div'), { className: 'lbl', textContent: text }); $('#labels').append(el); labels.push([el, obj]); return el; };
 const fatMats = [];
 function fatLine(pts, color, width, opacity) {
   const g = new LineGeometry();
@@ -261,43 +326,89 @@ const line = (pts, color, opts = {}) => new THREE.Line(new THREE.BufferGeometry(
 
 for (const s of B.sensors) {
   const gz = groundH(s.x, s.y), top = toScene(s.x, s.y, gz).add(new THREE.Vector3(0, 0.45, 0));
-  scene.add(line([toScene(s.x, s.y, gz), top], '#151a23'));
+  sensorGroup.add(line([toScene(s.x, s.y, gz), top], '#151a23'));
   const head = new THREE.Mesh(new THREE.OctahedronGeometry(0.09), new THREE.MeshStandardMaterial({ color: '#151a23' }));
   head.position.copy(top);
   head.castShadow = true;
-  scene.add(head);
+  sensorGroup.add(head);
   label(s.id, head);
   const cfg = S.sensors.find(c => c.id === s.id);
   head.userData.tip = () => `${s.id}: radio receiver on a ${cfg.mast_m} m mast. It measures the signal power and the direction (bearing) of each drone that it hears.`;
   hoverables.push(head);
   s.top = top;
 }
+
+// what the receivers got for each drone, each second: located (fix), heard by one, or nothing
+const fixAt = {}, status = {};
+for (const id of objIds) {
+  fixAt[id] = new Map(B.fused[id].map(f => [f[0], f]));
+  status[id] = B.t.map((tt, i) => fixAt[id].has(tt) ? 'located' : B.sensors.some(s => B.links[`${s.id}|${id}`].det[i]) ? 'heard' : 'none');
+}
+const STATUS_RGB = Object.fromEntries(Object.entries(STATUS).map(([k, c]) => [k, new THREE.Color(c).toArray()]));
+
+// error band: a flat ribbon along the path, as wide as each fix's position error (ce), fading as
+// the error grows; capped so a fix with a km-scale error does not paint across the map
+const BAND_MAX_M = 500, ERR_BEST = 50, ERR_WORST = 2000;  // m
+const precision = ce => 1 - Math.min(Math.max(Math.log(ce / ERR_BEST) / Math.log(ERR_WORST / ERR_BEST), 0), 1);  // 1 = ±50 m, 0 = ±2 km
+function errorBand(id) {
+  const tr = B.truth[id], p = [], c = [], ix = [], start = [], rgb = new THREE.Color(STATUS.located).toArray();
+  for (let i = 0; i < N; i++) {
+    const a = Math.max(i - 1, 0), b = Math.min(i + 1, N - 1), dx = tr.x[b] - tr.x[a], dy = tr.y[b] - tr.y[a], len = Math.hypot(dx, dy) || 1;
+    const ce = fixAt[id].get(B.t[i])?.[3] ?? 0, w = Math.min(ce, BAND_MAX_M), ox = -dy / len * w, oy = dx / len * w;
+    p.push(...toScene(tr.x[i] + ox, tr.y[i] + oy, tr.z[i]).toArray(), ...toScene(tr.x[i] - ox, tr.y[i] - oy, tr.z[i]).toArray());
+    const alpha = ce ? 0.04 + 0.8 * precision(ce) ** 2 : 0;  // poor fixes stay faint so many drones do not clutter
+    c.push(...rgb, alpha, ...rgb, alpha);
+    start.push(ix.length);
+    if (i < N - 1 && ce && fixAt[id].has(B.t[i + 1])) ix.push(2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 2, 2 * i + 1, 2 * i + 3);
+  }
+  start.push(ix.length);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 4));
+  g.setIndex(ix);
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+  m.userData.start = start;
+  return m;
+}
+
 // drone models: models/*.glb at real size, nose -Z, right +X, up +Y; a sphere if one is missing
 const loader = new GLTFLoader(), gltfs = {};
 for (const d of Object.values(B.drones ?? {})) gltfs[d.model] ??= loader.loadAsync(`../${d.model}`).catch(() => null);
-const drones = {};
+const drones = {}, scenePts = {};
 for (const id of objIds) {
   const tr = B.truth[id];
-  truthGroup.add(fatLine(tr.x.map((x, i) => toScene(x, tr.y[i], tr.z[i])), color(id), 3, 0.7));
+  scenePts[id] = tr.x.map((x, i) => toScene(x, tr.y[i], tr.z[i]));
+  const path = fatLine(scenePts[id], color(id), 3, 0.7), band = errorBand(id);
+  truthGroup.add(path);
+  sensedGroup.add(band);
   const m = new THREE.Group(), gltf = await gltfs[B.drones?.[id]?.model];
   const body = gltf ? gltf.scene.clone(true) : new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 12), new THREE.MeshStandardMaterial({ color: color(id) }));
   const size = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3());
-  body.scale.setScalar(1 / Math.max(size.x, size.y, size.z));  // 1 unit across; the group scales it to DRONE_PX
+  body.scale.setScalar(1 / Math.max(size.x, size.y, size.z));  // 1 unit across; the group scales it to opt.size px
   m.add(body);
   const drop = line([new THREE.Vector3(), new THREE.Vector3()], color(id), { opacity: 0.5 });
   truthGroup.add(m, drop);
-  label(id, m);
-  const o = S.objects.find(o => o.id === id);
-  const tip = () => `${id}: ${B.drones?.[id]?.name ?? o.type}, ${o.alt_agl_m} m above ground, transmits on ${o.freq_mhz} MHz. This is the true position.`;
+  const lbl = label(id, m);
+  const mats = [], props = [];
   body.traverse(c => {
     if (!c.isMesh) return;
     c.castShadow = true;
-    if (gltf && AIRFRAME.test(c.material.name)) { c.material = c.material.clone(); c.material.color.set(color(id)); }
-    c.userData.tip = tip;
+    if (!gltf || AIRFRAME.test(c.material.name)) {
+      if (gltf) { c.material = c.material.clone(); c.material.color.set(color(id)); }
+      mats.push(c.material);
+    }
+    if (c.name.startsWith('prop')) {  // spin about the blade disc's thinnest axis
+      c.geometry.computeBoundingBox();
+      const e = c.geometry.boundingBox.getSize(new THREE.Vector3()).toArray(), k = e.indexOf(Math.min(...e));
+      props.push([c, new THREE.Vector3(...[0, 1, 2].map(n => +(n === k)))]);
+    }
+    c.userData.tip = () => droneTip(id);
+    c.userData.droneId = id;
     hoverables.push(c);
   });
-  drones[id] = { m, drop };
+  drones[id] = { m, drop, path, band, lbl, mats, props, boost: 1 };
 }
+
 const bearings = {};
 for (const key in B.links) {
   const [sid, oid] = key.split('|'), s = B.sensors.find(s => s.id === sid);
@@ -306,9 +417,8 @@ for (const key in B.links) {
   sensedGroup.add(l);
   bearings[key] = { l, s };
 }
-const fixAt = {}, rings = {};
+const rings = {};
 for (const id of objIds) {
-  fixAt[id] = new Map(B.fused[id].map(f => [f[0], f]));
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 64), new THREE.MeshBasicMaterial({ color: color(id), side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false }));
   ring.rotation.x = -Math.PI / 2;
   ring.renderOrder = 11;
@@ -326,8 +436,137 @@ for (const id of objIds) {
   rings[id] = ring;
 }
 
-// ---- sensor cards ----
+// ---- path drawing: whole flight, flown so far, or the last minute; coloured by drone or by certainty ----
+const pathRange = i => ({ full: [0, N - 1], flown: [0, i], trail: [Math.max(0, i - 60), i] })[opt.path];
+function drawPaths(i, all) {
+  for (const id of objIds) {
+    const d = drones[id], r = pathRange(i);
+    d.path.visible = !!r && r[1] > r[0];
+    d.band.visible = !!r && opt.ribbon;
+    if (r) d.band.geometry.setDrawRange(d.band.userData.start[r[0]], d.band.userData.start[r[1]] - d.band.userData.start[r[0]]);
+    if (!d.path.visible || (opt.path === 'full' && !all)) continue;
+    d.path.geometry.dispose();
+    d.path.geometry = new LineGeometry();  // fresh buffers: the point count changes
+    d.path.geometry.setPositions(scenePts[id].slice(r[0], r[1] + 1).flatMap(p => p.toArray()));
+    if (opt.colorBy === 'certainty') d.path.geometry.setColors(status[id].slice(r[0], r[1] + 1).flatMap(s => STATUS_RGB[s]));
+    Object.assign(d.path.material, { vertexColors: opt.colorBy === 'certainty' });
+    d.path.material.color.set(opt.colorBy === 'certainty' ? '#ffffff' : color(id));
+    d.path.material.needsUpdate = true;
+  }
+}
+
+// ---- hover highlight: glow, bigger, own path forward, the others dimmed ----
+let hoverId = null;
+function setHover(id) {
+  if (id === hoverId) return;
+  hoverId = id;
+  for (const k of objIds) {
+    const d = drones[k], on = k === id, dim = id && !on;
+    d.mats.forEach(m => m.emissive?.set(on ? color(k) : '#000000').multiplyScalar(on ? 0.55 : 1));
+    d.boost = on ? 1.4 : 1;
+    d.path.material.opacity = dim ? 0.15 : on ? 1 : 0.7;
+    d.path.material.linewidth = on ? 6 : 3;
+    d.band.material.opacity = dim ? 0.12 : on ? 1 : 0.6;
+    d.lbl.classList.toggle('hot', on);
+  }
+  document.querySelectorAll('.drow').forEach(r => r.classList.toggle('sel', r.dataset.id === id));
+}
+function droneNow(id, i) {
+  const tr = B.truth[id], j = Math.min(i + 1, N - 1), k = j === i ? Math.max(i - 1, 0) : i;
+  const dt = (B.t[j] - B.t[k]) || 1;
+  return { agl: tr.z[i] - groundH(tr.x[i], tr.y[i]), speed: Math.hypot(tr.x[j] - tr.x[k], tr.y[j] - tr.y[k]) / dt, heading: tr.h?.[i] };
+}
+function droneTip(id) {
+  const i = Math.min(Math.floor(t), N - 1), n = droneNow(id, i), st = status[id][i], fx = fixAt[id].get(B.t[i]);
+  const heard = B.sensors.filter(s => B.links[`${s.id}|${id}`].det[i]).map(s => s.id);
+  const what = st === 'located' ? `Located by ${heard.join(', ')}, error ±${fx[3]} m.` : st === 'heard' ? `Heard by ${heard[0]} only, so no position fix.` : 'No receiver hears it now.';
+  return `${id}: ${B.drones?.[id]?.name ?? 'drone'}. ${Math.round(n.agl)} m above ground, ${n.speed.toFixed(0)} m/s${n.heading != null ? `, heading ${Math.round(n.heading)}°` : ''}. ${what}`;
+}
+
+// ---- coverage heatmap: a sheet at one height, or a 3D cloud over all heights ----
+const C = B.coverage, heat = { metric: 'off', view: 'slice', alt: 0, em: C?.object_emitter[objIds[0]] };
+const rampC = HEAT_RAMP.map(c => new THREE.Color(c));
+const rampColor = v => { const f = v * (rampC.length - 1), k = Math.min(Math.floor(f), rampC.length - 2); return rampC[k].clone().lerp(rampC[k + 1], f - k); };
+function certainty(e, metric, k) {  // 0..1, darker = more certain; null = nothing to draw
+  if (metric === 'err') { const m = e.err[k]; return m < 0 ? null : precision(m); }
+  const p = e[metric][k] / 100;
+  return p < 0.02 ? null : p;
+}
+let heatObj = null;
+const dotTexture = (() => {  // soft round dot for the 3D cloud
+  const cv = Object.assign(document.createElement('canvas'), { width: 64, height: 64 }), g = cv.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.5, 'rgba(255,255,255,.8)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(cv);
+})();
+function drawHeat() {
+  if (heatObj) { scene.remove(heatObj); heatObj.geometry.dispose(); heatObj.material.dispose(); heatObj = null; }
+  if (!C || heat.metric === 'off') return;
+  const e = C.emitters[heat.em], cells = C.nx * C.ny, p = [], c = [], ix = [];
+  const cell = (a, r, q) => { const x = C.x0 + q * C.dx, y = C.y0 - r * C.dy; return [x, y, toScene(x, y, groundH(x, y) + C.alts[a])]; };
+  if (heat.view === 'slice') {
+    for (let r = 0; r < C.ny; r++) for (let q = 0; q < C.nx; q++) {
+      const v = certainty(e, heat.metric, heat.alt * cells + r * C.nx + q);
+      p.push(...cell(heat.alt, r, q)[2].toArray());
+      c.push(...rampColor(v ?? 0).toArray(), v == null ? 0 : 0.35 + 0.45 * v);
+    }
+    for (let r = 0; r < C.ny - 1; r++) for (let q = 0; q < C.nx - 1; q++) {
+      const a = r * C.nx + q;
+      ix.push(a, a + C.nx, a + 1, a + 1, a + C.nx, a + C.nx + 1);
+    }
+  } else {
+    for (let a = 0; a < C.alts.length; a++) for (let r = 0; r < C.ny; r++) for (let q = 0; q < C.nx; q++) {
+      const v = certainty(e, heat.metric, a * cells + r * C.nx + q);
+      if (v == null || v < 0.1) continue;
+      p.push(...cell(a, r, q)[2].toArray());
+      c.push(...rampColor(v).toArray(), 0.08 + 0.62 * v);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 4));
+  if (heat.view === 'slice') {
+    g.setIndex(ix);
+    heatObj = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+  } else {
+    heatObj = new THREE.Points(g, new THREE.PointsMaterial({ vertexColors: true, transparent: true, depthWrite: false, size: C.dx / 1000 * 0.8, sizeAttenuation: true, map: dotTexture }));
+  }
+  heatObj.renderOrder = 5;
+  scene.add(heatObj);
+}
+function heatLegend() {
+  $('#h-ramp').style.background = `linear-gradient(90deg, ${HEAT_RAMP.join(', ')})`;
+  const err = heat.metric === 'err';
+  $('#h-lo').textContent = err ? `±${ERR_WORST / 1000} km` : '0%';
+  $('#h-hi').textContent = err ? `±${ERR_BEST} m` : '100%';
+  $('#h-what').textContent = { off: '', located: 'chance to be located', heard: 'chance to be heard', err: 'expected fix error' }[heat.metric];
+  $('#h-alt').disabled = heat.view === 'cloud';
+  $('#h-alt-l').textContent = heat.view === 'cloud' ? 'Height: all' : `Height: ${C.alts[heat.alt]} m`;
+}
+if (C) {
+  $('#h-alt').max = C.alts.length - 1;
+  heat.alt = Math.min(1, C.alts.length - 1);
+  $('#h-alt').value = heat.alt;
+  for (const [key, e] of Object.entries(C.emitters)) {
+    const users = objIds.filter(id => C.object_emitter[id] === key);
+    $('#h-em').append(Object.assign(document.createElement('option'), { value: key, textContent: `${e.label} · ${users.join(', ')}` }));
+  }
+  $('#h-alt').oninput = e => { heat.alt = +e.target.value; heatLegend(); drawHeat(); };
+  $('#h-em').onchange = e => { heat.em = e.target.value; drawHeat(); };
+  heatLegend();
+} else {
+  $('#heat-body').hidden = true;
+  $('#heat-none').hidden = false;
+}
+
+// ---- cards: drones now, then one per receiver ----
 const fmtT = t => new Date(Date.parse(S.start_utc) + t * 1000).toISOString().slice(11, 19);
+const droneCard = Object.assign(document.createElement('div'), { className: 'card' });
+droneCard.innerHTML = `<h3>Drones<span>now<i class="q" data-tip="Height above ground and what the receivers make of each drone right now. Hover a row to highlight that drone; hover the drone itself for speed and heading.">?</i></span></h3>` +
+  objIds.map(id => `<div class="row drow" data-id="${id}"><i class="dot" style="background:${color(id)}"></i>${id}<span class="v"></span></div>`).join('');
+$('#cards').append(droneCard);
+droneCard.querySelectorAll('.drow').forEach(r => { r.onmouseenter = () => setHover(r.dataset.id); r.onmouseleave = () => setHover(null); });
 const PMIN = -130, PMAX = -50, SW = 244, SH = 48;
 const py = p => SH - (Math.min(Math.max(p, PMIN), PMAX) - PMIN) / (PMAX - PMIN) * SH;
 let selected = null;
@@ -344,7 +583,7 @@ for (const s of B.sensors) {
     ${links.map(([o]) => `<div class="row" data-k="${s.id}|${o}" data-tip="Power and bearing that ${s.id} measures from ${o} now. Click to see the loss breakdown."><i class="dot" style="background:${color(o)}"></i>${o}<span class="v"></span></div>`).join('')}`;
   $('#cards').append(card);
 }
-document.querySelectorAll('.row').forEach(r => r.onclick = () => { selected = selected === r.dataset.k ? null : r.dataset.k; update(true); });
+document.querySelectorAll('.row[data-k]').forEach(r => r.onclick = () => { selected = selected === r.dataset.k ? null : r.dataset.k; update(true); });
 
 function whyCard(k, i) {
   const [sid, oid] = k.split('|'), L = B.links[k], s = S.sensors.find(s => s.id === sid), o = S.objects.find(o => o.id === oid);
@@ -372,20 +611,22 @@ $('#seek').max = N - 1;
 function update(force) {
   const i = Math.min(Math.floor(t), N - 1), f = t - i, j = Math.min(i + 1, N - 1);
   for (const id of objIds) {
-    const tr = B.truth[id], lerp = a => a[i] + (a[j] - a[i]) * f;
+    const tr = B.truth[id], lerp = a => a[i] + (a[j] - a[i]) * f, d = drones[id];
     const x = lerp(tr.x), y = lerp(tr.y);
-    drones[id].m.position.copy(toScene(x, y, lerp(tr.z)));
+    d.m.position.copy(toScene(x, y, lerp(tr.z)));
     if (tr.h) {  // heading clockwise from north (shortest way round), pitch nose up, roll right side down
       const hd = tr.h[i] + ((((tr.h[j] - tr.h[i]) % 360) + 540) % 360 - 180) * f, rad = Math.PI / 180;
-      drones[id].m.rotation.set(lerp(tr.p) * rad, -hd * rad, -lerp(tr.r) * rad, 'YXZ');
+      d.m.rotation.set(lerp(tr.p) * rad, -hd * rad, -lerp(tr.r) * rad, 'YXZ');
     }
-    drones[id].drop.geometry.setFromPoints([drones[id].m.position, toScene(x, y, groundH(x, y))]);
+    d.drop.visible = opt.drops;
+    if (opt.drops) d.drop.geometry.setFromPoints([d.m.position, toScene(x, y, groundH(x, y))]);
   }
   if (i === lastI && !force) return;
   lastI = i;
+  drawPaths(i, false);
   for (const k in bearings) {
     const { l, s } = bearings[k], L = B.links[k];
-    l.visible = !!L.det[i];
+    l.visible = opt.bearings && !!L.det[i];
     if (!l.visible) continue;
     // stop the line at the edge of the block
     const b = L.bearing[i] * Math.PI / 180, ux = Math.sin(b), uy = Math.cos(b);
@@ -396,13 +637,17 @@ function update(force) {
   }
   for (const id of objIds) {
     const fx = fixAt[id].get(B.t[i]), ring = rings[id];
-    ring.visible = !!fx;
+    ring.visible = opt.fixes && !!fx;
     if (!fx) continue;
     ring.position.copy(toScene(fx[1], fx[2], groundH(fx[1], fx[2]) + 30));
     ring.scale.setScalar(Math.max(fx[3], 60) / 1000);
   }
+  droneCard.querySelectorAll('.drow').forEach(r => {
+    const id = r.dataset.id, n = droneNow(id, i), st = status[id][i];
+    r.querySelector('.v').innerHTML = `${Math.round(n.agl)} m · <span class="st"><i style="background:${STATUS[st]}"></i>${STATUS_TEXT[st]}</span>`;
+  });
   document.querySelectorAll('.card svg .cur').forEach(c => { const x = i / (N - 1) * SW; c.setAttribute('x1', x); c.setAttribute('x2', x); });
-  document.querySelectorAll('.row').forEach(r => {
+  document.querySelectorAll('.row[data-k]').forEach(r => {
     const L = B.links[r.dataset.k], v = r.querySelector('.v');
     v.textContent = L.det[i] ? `${L.power[i].toFixed(0)} dBm · ${L.bearing[i].toFixed(0)}°` : 'no signal';
     v.classList.toggle('off', !L.det[i]);
@@ -421,13 +666,19 @@ function segment(sel, fn) {
 }
 segment('#ground', setGround);
 segment('#show', setShow);
+segment('#h-metric', v => { heat.metric = v; heatLegend(); drawHeat(); });
+$('#h-3d').onchange = e => { heat.view = e.target.checked ? 'cloud' : 'slice'; heatLegend(); drawHeat(); };
+$('#o-path').onchange = e => { opt.path = e.target.value; drawPaths(lastI, true); };
+$('#o-color').onchange = e => { opt.colorBy = e.target.value; $('#cert-keys').hidden = opt.colorBy !== 'certainty'; drawPaths(lastI, true); };
+for (const k of ['ribbon', 'labels', 'drops', 'bearings', 'fixes', 'receivers']) $(`#o-${k}`).onchange = e => { opt[k] = e.target.checked; sensorGroup.visible = opt.receivers; update(true); };
+$('#o-size').oninput = e => { opt.size = +e.target.value; };
 $('#play').onclick = () => { playing = !playing; $('#play').textContent = playing ? '❚❚' : '▶'; $('#play').ariaLabel = playing ? 'Pause' : 'Play'; };
 $('#seek').oninput = e => { t = +e.target.value; update(true); };
-addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); $('#play').click(); } });
+addEventListener('keydown', e => { if (e.code === 'Space' && !e.target.closest('input, select')) { e.preventDefault(); $('#play').click(); } });
 
 // ---- header + legend ----
 $('#title h1').textContent = S.name;
-$('#title .sub').textContent = `${S.region} · ${S.sensors.length} receivers · ${objIds.length} drones · ${Math.round(S.duration_s / 60)} min`;
+$('#title .sub').textContent = `${S.region ?? ''} · ${S.sensors.length} receivers · ${objIds.length} drones · ${Math.round(S.duration_s / 60)} min`.replace(/^ · /, '');
 $('#title .sub2').textContent = `seed ${S.seed} · real terrain · starts ${S.start_utc.replace('T', ' ').replace('Z', ' UTC')}`;
 $('#zmin').textContent = `${Math.round(zmin)} m`;
 $('#zmax').textContent = `${Math.round(zmax)} m`;
@@ -439,31 +690,40 @@ controls.target.copy(ctr);
 const v = new THREE.Vector3();
 let last = performance.now();
 renderer.setAnimationLoop(now => {
-  const dt = (now - last) / 1000; last = now;
-  if (playing) { t += dt * +$('#speed').value; if (t >= N - 1) { t = N - 1; $('#play').click(); } update(); }
+  const dt = Math.min((now - last) / 1000, 0.1); last = now;
+  if (playing) {
+    t += dt * +$('#speed').value;
+    if (t >= N - 1) { t = N - 1; $('#play').click(); }
+    update();
+    for (const id of objIds) for (const [p, axis] of drones[id].props) p.rotateOnAxis(axis, PROP_SPIN * dt);
+  }
   controls.update();
-  const px = 2 * Math.tan(camera.fov * Math.PI / 360) * DRONE_PX / innerHeight;
-  for (const id of objIds) drones[id].m.scale.setScalar(camera.position.distanceTo(drones[id].m.position) * px);
+  const px = 2 * Math.tan(camera.fov * Math.PI / 360) / innerHeight;  // world size of one pixel at distance 1
+  for (const id of objIds) { const d = drones[id]; d.m.scale.setScalar(camera.position.distanceTo(d.m.position) * px * opt.size * d.boost); }
   renderer.render(scene, camera);
   for (const [el, obj] of labels) {
     v.setFromMatrixPosition(obj.matrixWorld).project(camera);
-    el.style.display = obj.parent?.visible === false || v.z > 1 ? 'none' : '';
+    let hidden = !opt.labels || v.z > 1;
+    for (let o = obj.parent; o && !hidden; o = o.parent) hidden = !o.visible;
+    el.style.display = hidden ? 'none' : '';
     el.style.left = `${(v.x + 1) / 2 * innerWidth}px`;
     el.style.top = `${(1 - v.y) / 2 * innerHeight}px`;
   }
 });
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); fatMats.forEach(m => m.resolution.set(innerWidth, innerHeight)); });
 
-// ---- tooltips: HTML elements with data-tip, and 3D objects with userData.tip ----
+// ---- tooltips: HTML elements with data-tip, and 3D objects with userData.tip; drones highlight on hover ----
 const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
 const shown = o => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
 function pick3D(e) {
   ptr.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
   ray.setFromCamera(ptr, camera);
-  return ray.intersectObjects(hoverables.filter(shown), false)[0]?.object.userData.tip();
+  return ray.intersectObjects(hoverables.filter(shown), false)[0]?.object;
 }
 addEventListener('pointermove', e => {
-  const tip = $('#tip'), text = e.target.closest?.('[data-tip]')?.dataset.tip ?? (e.target === renderer.domElement ? pick3D(e) : null);
+  const onCanvas = e.target === renderer.domElement, hit = onCanvas ? pick3D(e) : null;
+  if (onCanvas) setHover(hit?.userData.droneId ?? null);
+  const tip = $('#tip'), text = e.target.closest?.('[data-tip]')?.dataset.tip ?? hit?.userData.tip?.();
   tip.style.display = text ? 'block' : 'none';
   if (!text) return;
   tip.textContent = text;
@@ -471,13 +731,15 @@ addEventListener('pointermove', e => {
   tip.style.left = `${e.clientX + 14 + w > innerWidth ? e.clientX - 14 - w : e.clientX + 14}px`;
   tip.style.top = `${e.clientY + 14 + h > innerHeight ? e.clientY - 14 - h : e.clientY + 14}px`;
 });
-// deep link to one moment: ?t=<seconds>&ground=sat|map|elev&show=truth|sensed|both&sel=RF1|drone_01
+// deep link to one moment: ?t=<seconds>&ground=sat|map|elev&show=truth|sensed|both&sel=RF1|drone_01&heat=located|heard|err
 const q = new URLSearchParams(location.search);
 t = Math.min(+(q.get('t') ?? 0), N - 1);
 selected = q.get('sel');
 document.querySelector(`#show [data-v="${q.get('show') ?? 'both'}"]`)?.click();
+if (C && q.get('heat')) document.querySelector(`#h-metric [data-v="${q.get('heat')}"]`)?.click();
 $('#status').textContent = '';
 document.querySelector(`#ground [data-v="${q.get('ground') ?? 'sat'}"]`)?.click();
+drawPaths(Math.floor(t), true);
 update(true);
 </script>
 </body>
