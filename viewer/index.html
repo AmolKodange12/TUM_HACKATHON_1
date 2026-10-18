@@ -71,7 +71,7 @@
   <div class="ramp-l"><span id="zmin"></span><span id="vex"></span><span id="zmax"></span></div>
   <div>
     <div class="seg" id="ground"><button data-v="sat" class="on">Satellite</button><button data-v="map">Map</button><button data-v="elev">Elevation</button></div>
-    <div class="seg" id="show"><button data-v="truth" data-tip="Show where the drones really were.">Truth</button><button data-v="sensed" data-tip="Show what the receivers measured. A coloured line from a receiver is a measured bearing. A circle is a position from crossed bearings.">Sensed</button><button data-v="both" class="on" data-tip="Show the truth and the measurements together.">Both</button></div>
+    <div class="seg" id="show"><button data-v="truth" data-tip="Show where the drones really were.">Truth</button><button data-v="sensed" data-tip="Show what the sensors measured. A coloured line from a sensor is a measured bearing. A circle is a position fix, from crossed bearings or a radar's own range and bearing.">Sensed</button><button data-v="both" class="on" data-tip="Show the truth and the measurements together.">Both</button></div>
   </div>
 </div>
 <div id="cards" class="ui"></div>
@@ -110,6 +110,7 @@ const S = B.scenario, T = B.terrain, F = B.frame, N = B.t.length;
 const $ = s => document.querySelector(s);
 const objIds = Object.keys(B.truth);
 const color = id => COLORS[objIds.indexOf(id) % COLORS.length];
+const sensorCfg = id => S.sensors.find(c => c.id === id) ?? S.radars?.find(c => c.id === id);
 
 // ---- terrain grid helpers (local metres: x east, y north) ----
 const zs = T.z, zmin = Math.min(...zs), zmax = Math.max(...zs);
@@ -267,8 +268,10 @@ for (const s of B.sensors) {
   head.castShadow = true;
   scene.add(head);
   label(s.id, head);
-  const cfg = S.sensors.find(c => c.id === s.id);
-  head.userData.tip = () => `${s.id}: radio receiver on a ${cfg.mast_m} m mast. It measures the signal power and the direction (bearing) of each drone that it hears.`;
+  const cfg = sensorCfg(s.id);
+  head.userData.tip = () => s.kind === 'radar'
+    ? `${s.id}: radar on a ${cfg.mast_m} m mast. It transmits its own signal and measures the range, direction and radial speed of every drone it can see, whether or not that drone is transmitting.`
+    : `${s.id}: radio receiver on a ${cfg.mast_m} m mast. It measures the signal power and the direction (bearing) of each drone that it hears.`;
   hoverables.push(head);
   s.top = top;
 }
@@ -317,9 +320,12 @@ for (const id of objIds) {
   ring.add(disc);
   disc.userData.tip = () => {
     const i = Math.min(Math.floor(t), N - 1), fx = fixAt[id].get(B.t[i]), tr = B.truth[id];
-    const heard = B.sensors.filter(s => B.links[`${s.id}|${id}`].det[i]).map(s => s.id);
+    const heardSensors = B.sensors.filter(s => B.links[`${s.id}|${id}`].det[i]);
+    const radarHeard = heardSensors.find(s => s.kind === 'radar');
+    const how = radarHeard ? `${radarHeard.id} measured its range and bearing directly`
+                            : `${heardSensors.map(s => s.id).join(' and ')} measured a bearing, and the lines cross here`;
     const err = Math.hypot(fx[1] - tr.x[i], fx[2] - tr.y[i]);
-    return `Estimated position of ${id}. ${heard.join(' and ')} measured a bearing, and the lines cross here. The circle shows the estimated error (${fx[3]} m). Real error at this moment: ${Math.round(err)} m.`;
+    return `Estimated position of ${id}. ${how}. The circle shows the estimated error (${fx[3]} m). Real error at this moment: ${Math.round(err)} m.`;
   };
   hoverables.push(disc);
   sensedGroup.add(ring);
@@ -334,23 +340,45 @@ let selected = null;
 for (const s of B.sensors) {
   const card = Object.assign(document.createElement('div'), { className: 'card' });
   const links = objIds.map(o => [o, B.links[`${s.id}|${o}`]]);
-  const cardTip = `${s.id} is a radio receiver. The chart shows the signal power that it receives from each drone, in dBm, for the full scenario. A dashed line shows the detection threshold for each drone. Below its threshold, the receiver does not detect that drone. The black line shows the current time.`;
-  card.innerHTML = `<h3>${s.id}<span>received power, dBm<i class="q" data-tip="${cardTip}">?</i></span></h3>
+  const isRadar = s.kind === 'radar';
+  const cardTip = isRadar
+    ? `${s.id} is a radar. The chart shows the echo power it receives from each drone, in dBm, for the full scenario. A dashed line shows the detection threshold for each drone. Below its threshold, the radar does not detect that drone. The black line shows the current time.`
+    : `${s.id} is a radio receiver. The chart shows the signal power that it receives from each drone, in dBm, for the full scenario. A dashed line shows the detection threshold for each drone. Below its threshold, the receiver does not detect that drone. The black line shows the current time.`;
+  card.innerHTML = `<h3>${s.id}<span>${isRadar ? 'echo' : 'received'} power, dBm<i class="q" data-tip="${cardTip}">?</i></span></h3>
     <svg viewBox="0 0 ${SW} ${SH}" preserveAspectRatio="none" data-tip="${cardTip}">
       ${links.map(([o, L]) => `<line x1="0" x2="${SW}" y1="${py(L.noise + s.threshold_db)}" y2="${py(L.noise + s.threshold_db)}" stroke="${color(o)}" stroke-opacity=".6" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>`).join('')}
       ${links.map(([o, L]) => `<polyline fill="none" stroke="${color(o)}" stroke-width="1" vector-effect="non-scaling-stroke" points="${L.power.map((p, i) => `${(i / (N - 1) * SW).toFixed(1)},${py(p).toFixed(1)}`).join(' ')}"/>`).join('')}
       <line class="cur" x1="0" x2="0" y1="0" y2="${SH}" stroke="#151a23" vector-effect="non-scaling-stroke"/>
     </svg>
-    ${links.map(([o]) => `<div class="row" data-k="${s.id}|${o}" data-tip="Power and bearing that ${s.id} measures from ${o} now. Click to see the loss breakdown."><i class="dot" style="background:${color(o)}"></i>${o}<span class="v"></span></div>`).join('')}`;
+    ${links.map(([o]) => `<div class="row" data-k="${s.id}|${o}" data-tip="${isRadar ? 'Range, bearing and radial speed' : 'Power and bearing'} that ${s.id} measures from ${o} now. Click to see the loss breakdown."><i class="dot" style="background:${color(o)}"></i>${o}<span class="v"></span></div>`).join('')}`;
   $('#cards').append(card);
 }
 document.querySelectorAll('.row').forEach(r => r.onclick = () => { selected = selected === r.dataset.k ? null : r.dataset.k; update(true); });
 
 function whyCard(k, i) {
-  const [sid, oid] = k.split('|'), L = B.links[k], s = S.sensors.find(s => s.id === sid), o = S.objects.find(o => o.id === oid);
-  const loss = [['Free-space loss', L.fspl[i]], ['Terrain loss', L.diff[i]], ['Shadowing', L.shadow[i]]];
+  const [sid, oid] = k.split('|'), L = B.links[k], s = sensorCfg(sid), o = S.objects.find(o => o.id === oid);
   const bar = v => `<div class="bar"><i style="width:${Math.min(Math.max(v, 0) / 140 * 100, 100)}%"></i></div>`;
   const verdict = L.diff[i] >= 6 ? 'Terrain blocks the direct path.' : L.diff[i] > 0 ? 'Terrain is near the direct path.' : 'The direct path is clear.';
+  if (L.range) {  // radar: active, two-way link; range + bearing + radial speed instead of a crossed-bearing fix
+    const loss = [['Two-way free-space loss', L.fspl[i]], ['Two-way terrain loss', L.diff[i]], ['Shadowing', L.shadow[i]]];
+    return `<h3>${sid} ← ${oid}<span class="close">✕</span></h3>
+      <div style="color:var(--muted);margin-bottom:6px">${fmtT(B.t[i])} UTC · ${(L.dist[i] / 1000).toFixed(2)} km · ${s.freq_mhz} MHz radar</div>
+      <table>
+        <tr><td>Transmit power</td><td>${s.tx_power_dbm.toFixed(1)} dBm</td></tr>
+        <tr><td>Antenna gain (×2, same antenna)</td><td>+${(2 * s.gain_dbi).toFixed(1)} dB</td></tr>
+        ${loss.map(([n, v]) => `<tr><td>${n}${bar(v)}</td><td>${-v > 0 ? '+' : ''}${(-v).toFixed(1)} dB</td></tr>`).join('')}
+        <tr><td>Pulse integration gain</td><td>+${(s.integration_gain_db ?? 0).toFixed(1)} dB</td></tr>
+        <tr class="sum"><td>Received echo power</td><td>${L.power[i].toFixed(1)} dBm</td></tr>
+        <tr><td>Noise floor</td><td>${L.noise.toFixed(1)} dBm</td></tr>
+        <tr><td>SNR (threshold ${s.threshold_db} dB)</td><td>${L.snr[i].toFixed(1)} dB</td></tr>
+        ${L.det[i] ? `
+        <tr><td>Range, 1σ</td><td>${Math.round(L.range[i])} m ±${L.range_sigma[i].toFixed(0)} m</td></tr>
+        <tr><td>Bearing, 1σ</td><td>${L.bearing[i].toFixed(1)}° ±${L.sigma[i].toFixed(1)}°</td></tr>
+        <tr><td>Radial speed</td><td>${L.radial[i] > 0 ? 'receding' : 'closing'} ${Math.abs(L.radial[i]).toFixed(1)} m/s</td></tr>` : ''}
+      </table>
+      <div class="verdict" style="color:${L.det[i] ? '#2f6b4f' : '#b45309'}">${L.det[i] ? 'Detected' : 'Not detected'}. ${verdict}</div>`;
+  }
+  const loss = [['Free-space loss', L.fspl[i]], ['Terrain loss', L.diff[i]], ['Shadowing', L.shadow[i]]];
   return `<h3>${sid} ← ${oid}<span class="close">✕</span></h3>
     <div style="color:var(--muted);margin-bottom:6px">${fmtT(B.t[i])} UTC · ${(L.dist[i] / 1000).toFixed(2)} km · ${o.freq_mhz} MHz</div>
     <table>
@@ -404,7 +432,7 @@ function update(force) {
   document.querySelectorAll('.card svg .cur').forEach(c => { const x = i / (N - 1) * SW; c.setAttribute('x1', x); c.setAttribute('x2', x); });
   document.querySelectorAll('.row').forEach(r => {
     const L = B.links[r.dataset.k], v = r.querySelector('.v');
-    v.textContent = L.det[i] ? `${L.power[i].toFixed(0)} dBm · ${L.bearing[i].toFixed(0)}°` : 'no signal';
+    v.textContent = L.det[i] ? (L.range ? `${Math.round(L.range[i])} m · ${L.bearing[i].toFixed(0)}°` : `${L.power[i].toFixed(0)} dBm · ${L.bearing[i].toFixed(0)}°`) : (L.range ? 'no return' : 'no signal');
     v.classList.toggle('off', !L.det[i]);
     r.classList.toggle('sel', r.dataset.k === selected);
   });
@@ -427,7 +455,8 @@ addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault();
 
 // ---- header + legend ----
 $('#title h1').textContent = S.name;
-$('#title .sub').textContent = `${S.region} · ${S.sensors.length} receivers · ${objIds.length} drones · ${Math.round(S.duration_s / 60)} min`;
+const radarCount = S.radars?.length ? ` · ${S.radars.length} radar${S.radars.length > 1 ? 's' : ''}` : '';
+$('#title .sub').textContent = `${S.region} · ${S.sensors.length} receivers${radarCount} · ${objIds.length} drones · ${Math.round(S.duration_s / 60)} min`;
 $('#title .sub2').textContent = `seed ${S.seed} · real terrain · starts ${S.start_utc.replace('T', ' ').replace('Z', ' UTC')}`;
 $('#zmin').textContent = `${Math.round(zmin)} m`;
 $('#zmax').textContent = `${Math.round(zmax)} m`;

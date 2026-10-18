@@ -1,6 +1,7 @@
 """Faithfulness checks. Run: python test_sim.py (or pytest)."""
 import filecmp
 import json
+import math
 import tempfile
 from pathlib import Path
 
@@ -47,6 +48,32 @@ def test_bearing_noise_grows_as_snr_drops():
     assert np.all(np.diff(s) > 0) and s[1] == 2.0
 
 
+def test_radar_power_falls_with_distance_on_flat_ground():
+    t = flat()
+    rx = np.array([0.0, -5000.0, 110.0])
+    tx = np.stack([np.zeros(50), np.linspace(-4900, 5000, 50), np.full(50, 160.0)], 1)
+    _, fspl, diff, _ = sim.path_loss(t, rx, tx, 9500.0)
+    power = sim.radar_echo_power(45.0, 30.0, fspl, diff, -10.0, 9500.0, 25.0)
+    assert np.all(np.diff(power) < 0)
+
+
+def test_radial_velocity_sign_matches_closing_or_receding():
+    rx = np.array([0.0, 0.0, 0.0])
+    tx = np.array([[0.0, 1000.0, 0.0]])  # due north of the radar
+    closing = sim.radial_velocity(rx, tx, np.array([0.0]), np.array([-20.0]))  # flying south: closing
+    receding = sim.radial_velocity(rx, tx, np.array([0.0]), np.array([20.0]))  # flying north: receding
+    assert closing[0] < 0 < receding[0]
+
+
+def test_radar_fix_with_no_noise_finds_the_target():
+    rx = np.array([0.0, 0.0])
+    target = np.array([1000.0, 2000.0])
+    rng_m = float(np.hypot(*(target - rx)))
+    bearing = math.degrees(math.atan2(target[0] - rx[0], target[1] - rx[1])) % 360
+    xy, ce = sim.radar_fix(rx, rng_m, bearing, 0.001, 0.001)
+    assert np.hypot(*(xy - target)) < 1 and ce > 0
+
+
 def test_crossed_bearings_find_the_target():
     target = np.array([1000.0, 2000.0])
     pts = np.array([[-3000.0, -2000.0], [3000.0, -2000.0]])
@@ -88,7 +115,7 @@ def test_same_seed_same_bytes():
     with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
         sim.run("scenario.json", a)
         sim.run("scenario.json", b)
-        files = ["truth.csv", "rf_raw.csv", "rf_budget.csv", "fused.csv", "fused.cot.xml", "bundle.json"]
+        files = ["truth.csv", "rf_raw.csv", "rf_budget.csv", "radar_raw.csv", "radar_budget.csv", "fused.csv", "fused.cot.xml", "bundle.json"]
         match, mismatch, err = filecmp.cmpfiles(a, b, files, shallow=False)
         assert not mismatch and not err, (mismatch, err)
 

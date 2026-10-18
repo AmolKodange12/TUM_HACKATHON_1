@@ -25,7 +25,7 @@ Direct link to one moment: `viewer/?t=450&ground=map&sel=RF2|drone_01`. The para
 
 | File | What it does |
 |---|---|
-| `scenario.json` | Input: area, start time, duration, seed, receivers, drones and waypoints |
+| `scenario.json` | Input: area, start time, duration, seed, receivers, radars, drones and waypoints |
 | `sim.py` | Engine: DEM → truth → radio links → crossed bearings → outputs |
 | `flight.py` | Flight model: drone type + flight plan → 10 Hz track with heading, pitch and roll |
 | `drones.json` | Drone types: size, mass, endurance, flight limits, 3D model |
@@ -77,9 +77,11 @@ blender -b -P models/render.py -- models/delta_wing.glb frame.png --heading 250 
 |---|---|---|
 | `truth.csv` | Position, altitude, speed, heading, pitch and roll of each object, every second | Answer key |
 | `rf_raw.csv` | What each receiver reports: power, SNR, bearing. Detections only | Sensor data |
-| `fused.cot.xml` | Positions from crossed bearings, as TAK Cursor on Target events | Sensor data |
-| `fused.csv` | The same fixes, with `source_object_id` and the error against the truth | Answer key |
 | `rf_budget.csv` | Full link budget for every receiver, object and second, detected or not | Explanation |
+| `radar_raw.csv` | What the radar reports: range, bearing, radial velocity, SNR. Detections only | Sensor data |
+| `radar_budget.csv` | Full two-way link budget for every radar, object and second, detected or not | Explanation |
+| `fused.cot.xml` | Positions from crossed bearings or a radar's own range+bearing, as TAK Cursor on Target events | Sensor data |
+| `fused.csv` | The same fixes, with `source_object_id`, `method` and the error against the truth | Answer key |
 | `bundle.json` | Everything the viewer needs | Viewer |
 
 Every sensor record has a `source_object_id` column. All files use the same UTC clock.
@@ -97,12 +99,31 @@ For each receiver, each drone and each second:
 
 When two or more receivers detect the same drone, a weighted least-squares crossing gives a position. `ce` comes from the covariance of that solution.
 
+## Radar model
+
+A radar is active: it transmits on its own frequency and hears its own echo, so it detects a drone whether or not that
+drone is transmitting. For each radar, each drone and each second:
+
+1. Run the same terrain-and-diffraction path loss as the radio model, once, since the radar sits at both ends of the link.
+2. Double it (the signal crosses that path twice, out and back) and add the target's reflected aperture, from its
+   radar cross-section (`rcs_dbsm` in `drones.json`) and the radar's wavelength.
+3. Add the gain from integrating many pulses over a dwell (`integration_gain_db`) — a single pulse at this power would
+   rarely detect anything.
+4. Received power = transmit power + antenna gain (×2, the same antenna sends and listens) − losses + RCS gain +
+   integration gain. SNR = power − noise floor. Detected if SNR ≥ threshold.
+5. Bearing = true bearing + fixed bias + noise, same as a receiver. Range and radial velocity (Doppler) get their own
+   noise, also growing as the SNR drops.
+
+One radar already gives a full fix (range + bearing), no crossing with a second sensor needed.
+
 ## Checks (`test_sim.py`)
 
 - On flat ground, the loss always increases with distance.
 - A 150 m ridge between the receiver and the drone adds more than 15 dB of loss.
 - Bearing noise grows as the SNR drops.
 - Crossed bearings with no noise find the exact target.
+- Radar echo power falls with distance; a closing target has negative radial velocity, a receding one positive.
+- A radar range+bearing fix with no noise finds the exact target.
 - A quadcopter keeps to its speed, acceleration and tilt limits, and lands where it took off.
 - A fixed-wing holds an orbit in a 15 m/s wind without passing its bank limit, and its speed over the ground swings by the wind.
 - The same seed gives byte-identical output files.
@@ -116,6 +137,8 @@ Each limit has a `ponytail:` comment in `sim.py` that tells where to extend the 
 - The fusion step uses `source_object_id` to group detections. A real system must group them by frequency and time.
 - The area must stay inside one 1° DEM tile. The local metre frame is flat (good to about 15 km).
 - Drones follow the ground at a fixed height above it. They do not climb over ridges.
+- Radar RCS is one fixed number per drone class; a real target's RCS swings with aspect angle. Radial velocity uses
+  horizontal ground velocity only (no climb/descent component).
 - The wind is the same at every height. Propellers do not spin in the viewer.
 
 ## Next tasks
