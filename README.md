@@ -36,6 +36,8 @@ Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), clic
 - **Coverage heatmap:** for each drone radio, the chance that a drone at a point would be located (two or more receivers), heard (one or more), or the expected position error. Show one height above ground as a sheet, or all heights at once as a 3D cloud. Darker blue means more certain.
 - Propellers spin while the replay plays.
 
+**Sky Spotters** (`cute/`) plays the same `out/bundle.json` as a game: a hummingbird for the quadcopter, a stork for the recon drone, a swift for the delta wing, a pigeon for the decoy. Huts turn their binoculars to the bearings they measure and shout when they hear a bird; a fix pops a "Spotted!" badge with its error. Click a bird to follow it (Esc returns); `?t=` and `?bird=` deep-link.
+
 ## Files
 
 | File | What it does |
@@ -47,6 +49,7 @@ Pick the area on the map (up to 25 km a side, inside one 1° terrain tile), clic
 | `models/` | One GLB model per drone type, plus the Blender scripts that build and render them |
 | `serve.py` | Local server: the pages, plus `POST /api/simulate` for the planner |
 | `planner/index.html` | Scenario planner on a map. One file, Leaflet from a CDN |
+| `cute/index.html` | *Sky Spotters*: the same replay as a cosy bird game. Birds for drones, birdwatcher huts for receivers, same data |
 | `test_sim.py` | Checks that the physics behaves as it should |
 | `viewer/index.html` | 3D replay. One file, libraries come from a CDN, no build step |
 
